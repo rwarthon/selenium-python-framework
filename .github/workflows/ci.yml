@@ -1,0 +1,77 @@
+name: CI Pipeline (Quality Gate & Tests)
+
+# 1. TRIGGERS: Run on feature branches, main pushes, and Pull Requests
+on:
+  push:
+    branches:
+      - "main"
+      - "feat/**"
+      - "fix/**"
+  pull_request:
+    branches:
+      - "main"
+  workflow_dispatch: # Allows manual execution from the GitHub Actions tab
+
+# 2. PIPELINE JOBS (Sequential Stages: Stage 1 [Lint] -> Stage 2 [Test])
+jobs:
+  # =========================================================================
+  # STAGE 1: Fast Static Code Analysis Gate
+  # =========================================================================
+  lint:
+    name: "1. Static Analysis (Ruff)"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Ruff
+        run: pip install ruff
+
+      - name: Run Ruff Linter
+        run: ruff check .
+
+  # =========================================================================
+  # STAGE 2: Automated Test Execution (Only runs if Stage 1 passes)
+  # =========================================================================
+  test:
+    name: "2. API Test Suite (Pytest)"
+    needs: lint
+    runs-on: ubuntu-latest
+    # Shared environment variables injected once for all steps in this job
+    env:
+      BOOKING_API_URL: ${{ secrets.BOOKING_API_URL }}
+      BOOKING_USERNAME: ${{ secrets.BOOKING_USERNAME }}
+      BOOKING_PASSWORD: ${{ secrets.BOOKING_PASSWORD }}
+      API_TIMEOUT: ${{ secrets.API_TIMEOUT }}
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install project dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Scope Strategy:
+      # - On feature branches / PRs: Run fast Smoke Suite (-m smoke)
+      # - On main branch (Post-Merge): Run full API Regression Suite (-m api)
+      - name: Run Smoke Suite (Feature / PR Scope)
+        if: github.ref != 'refs/heads/main'
+        run: pytest -m smoke
+
+      - name: Run Full API Suite (Main Branch Scope)
+        if: github.ref == 'refs/heads/main'
+        run: pytest -m api

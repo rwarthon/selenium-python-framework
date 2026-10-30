@@ -1,0 +1,21 @@
+# Virtual environment
+venv/
+.venv/
+
+# Local environment variables
+.env
+
+# Python, Pytest, and Ruff cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# OS generated files (macOS & Windows)
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE specific folders
+.vscode/
+.idea/
