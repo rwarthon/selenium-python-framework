@@ -29,7 +29,7 @@ reviews:
     - path: "tests/**/*.py"
       instructions: |
         Enforce strict 4-layer test automation architecture:
-        1. Test files must ONLY contain test functions, assertions, and calls to the Service Layer.
+        1. Test files must ONLY contain test functions, assertions, Data Factory calls (`data/`), and calls to the Service Layer (`services/`).
         2. Direct usage of `requests` or `APIClient` inside `tests/` is strictly forbidden.
         3. All test functions must have explicit type hints (`-> None`) and appropriate Pytest markers (`@pytest.mark.api`, `@pytest.mark.smoke`).
     - path: "services/**/*.py"

@@ -1,0 +1,18 @@
+# ==============================================================================
+# GITHUB DEPENDABOT - AUTOMATED SUPPLY CHAIN & ACTION SHA UPDATES
+# ==============================================================================
+version: 2
+updates:
+  # 1. Monitor Python dependencies in requirements.txt
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  # 2. Monitor GitHub Actions and automatically update immutable commit SHAs
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
