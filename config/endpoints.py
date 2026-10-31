@@ -1,6 +1,9 @@
 """Centralized API endpoint definitions for target applications."""
+
+
 class BookingEndpoints:
     """Endpoint paths for the Restful-Booker API."""
+
     AUTH = "/auth"
     BOOKING = "/booking"
     PING = "/ping"

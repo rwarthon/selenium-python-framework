@@ -1,4 +1,5 @@
 """Global Pytest fixtures for test orchestration and dependency injection."""
+
 from collections.abc import Iterator
 
 import pytest
@@ -15,6 +16,7 @@ def booking_service() -> Iterator[BookingService]:
     yield service
     # Teardown: Close the underlying TCP session after the test finishes
     service.close()
+
 
 @pytest.fixture(scope="session")
 def auth_token() -> str:

@@ -1,4 +1,5 @@
 """Test suite for Restful-Booker API operations."""
+
 import pytest
 
 from data.booking_data import BookingData
@@ -14,6 +15,7 @@ def test_health_check(booking_service: BookingService) -> None:
     response = booking_service.ping()
     # Assert: Restful-Booker returns 201 Created for /ping health check
     assert response.status_code == 201, f"Expected 201, but got {response.status_code}"
+
 
 @pytest.mark.api
 @pytest.mark.smoke
