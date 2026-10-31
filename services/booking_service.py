@@ -1,4 +1,5 @@
 """Service layer encapsulating Restful-Booker domain operations (SOM)."""
+
 from typing import Any, ClassVar
 
 from requests import Response
@@ -10,22 +11,28 @@ from core.api_client import APIClient
 
 class BookingService:
     """Provide business-level methods to interact with the Booking API."""
+
     # Standard headers required by the Restful-Booker API contract
     DEFAULT_HEADERS: ClassVar[dict[str, str]] = {
         "Content-Type": "application/json",
-        "Accept": "application/json"
+        "Accept": "application/json",
     }
 
     def __init__(self) -> None:
         """Initialize the Booking service with its dedicated APIClient instance."""
-        self.client = APIClient(base_url=Config.BOOKING_API_URL,
-                                default_headers=self.DEFAULT_HEADERS)
+        self.client = APIClient(
+            base_url=Config.BOOKING_API_URL, default_headers=self.DEFAULT_HEADERS
+        )
 
     def ping(self) -> Response:
         """Perform a health check on the API server."""
         return self.client.get(BookingEndpoints.PING)
 
-    def authenticate(self, username: str = Config.BOOKING_USERNAME, password: str = Config.BOOKING_PASSWORD) -> Response:
+    def authenticate(
+        self,
+        username: str = Config.BOOKING_USERNAME,
+        password: str = Config.BOOKING_PASSWORD,
+    ) -> Response:
         """Request an authentication token using user credentials."""
         payload = {"username": username, "password": password}
         return self.client.post(BookingEndpoints.AUTH, payload=payload)
@@ -43,14 +50,18 @@ class BookingService:
         """Create a new booking record."""
         return self.client.post(BookingEndpoints.BOOKING, payload=payload)
 
-    def update_booking(self, booking_id: int, payload: dict[str, Any], token: str) -> Response:
+    def update_booking(
+        self, booking_id: int, payload: dict[str, Any], token: str
+    ) -> Response:
         """Fully update an existing booking (PUT) using token authentication."""
         endpoint = BookingEndpoints.booking_detail(booking_id)
         # Inject auth token via Cookie header as required by Restful-Booker
         auth_headers = {"Cookie": f"token={token}"}
         return self.client.put(endpoint, payload=payload, headers=auth_headers)
 
-    def partial_update_booking(self, booking_id: int, payload: dict[str, Any], token: str) -> Response:
+    def partial_update_booking(
+        self, booking_id: int, payload: dict[str, Any], token: str
+    ) -> Response:
         """Partially update an existing booking (PATCH) using token authentication."""
         endpoint = BookingEndpoints.booking_detail(booking_id)
         auth_headers = {"Cookie": f"token={token}"}

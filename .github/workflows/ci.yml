@@ -12,7 +12,15 @@ on:
       - "main"
   workflow_dispatch: # Allows manual execution from the GitHub Actions tab
 
-# 2. PIPELINE JOBS (Sequential Stages: Stage 1 [Lint] -> Stage 2 [Test])
+# 2. WORKFLOW GOVERNANCE & CONCURRENCY
+permissions:
+  contents: read # Enforce least-privilege security for the GITHUB_TOKEN
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true # Cancel redundant in-progress pipeline runs when a new commit is pushed to the same branch
+
+# 3. PIPELINE JOBS (Sequential Stages: Stage 1 [Lint] -> Stage 2 [Test])
 jobs:
   # =========================================================================
   # STAGE 1: Fast Static Code Analysis Gate
@@ -23,18 +31,23 @@ jobs:
 
     steps:
       - name: Checkout repository code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false # Prevent leaving the GITHUB_TOKEN on disk after clone
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
 
-      - name: Install Ruff
-        run: pip install ruff
+      - name: Install Ruff securely (wheels only)
+        run: "pip install --only-binary :all: $(grep '^ruff==' requirements.txt)"
 
       - name: Run Ruff Linter
         run: ruff check .
+
+      - name: Run Ruff Formatter Check
+        run: ruff format --check .
 
   # =========================================================================
   # STAGE 2: Automated Test Execution (Only runs if Stage 1 passes)
@@ -52,18 +65,18 @@ jobs:
 
     steps:
       - name: Checkout repository code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false # Prevent leaving the GITHUB_TOKEN on disk after clone
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+      - name: Set up Python 3.12 with pip cache
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
           cache: "pip"
 
-      - name: Install project dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+      - name: Install dependencies securely (wheels only)
+        run: "pip install --only-binary :all: -r requirements.txt"
 
       # Scope Strategy:
       # - On feature branches / PRs: Run fast Smoke Suite (-m smoke)
