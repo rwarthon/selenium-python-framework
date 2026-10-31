@@ -1,0 +1,48 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+# ==============================================================================
+# CODERABBIT AI - AUTONOMOUS PR REVIEWER CONFIGURATION
+# ==============================================================================
+language: "en-US"
+early_access: false
+
+reviews:
+  # Enforce strict architectural and code quality reviews (Staff Engineer persona)
+  profile: "assertive"
+  # Do not formally block PR merging; leave final approval to the QA Lead
+  request_changes_workflow: false
+  # Generate an executive summary of changes in the PR description
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+
+  auto_review:
+    enabled: true
+    # Skip automatic review on Work-In-Progress (Draft) Pull Requests
+    drafts: false
+
+  # ============================================================================
+  # ARCHITECTURAL GUARDRAILS (4-LAYER PATTERN ENFORCEMENT)
+  # ============================================================================
+  path_instructions:
+    - path: "tests/**/*.py"
+      instructions: |
+        Enforce strict 4-layer test automation architecture:
+        1. Test files must ONLY contain test functions, assertions, and calls to the Service Layer.
+        2. Direct usage of `requests` or `APIClient` inside `tests/` is strictly forbidden.
+        3. All test functions must have explicit type hints (`-> None`) and appropriate Pytest markers (`@pytest.mark.api`, `@pytest.mark.smoke`).
+    - path: "services/**/*.py"
+      instructions: |
+        1. Services must encapsulate business endpoints and delegate HTTP execution to `APIClient` from `core/`.
+        2. Services must NOT contain `assert` statements (assertions belong strictly to the `tests/` layer).
+    - path: "core/**/*.py"
+      instructions: |
+        Ensure low-level HTTP session handling, timeouts, and headers are managed cleanly without business domain coupling.
+    - path: ".github/workflows/**/*.yml"
+      instructions: |
+        Review CI/CD pipelines for DevSecOps best practices, least-privilege permissions, and fast execution times.
+
+chat:
+  # Allow conversational replies in PR review threads without tagging @coderabbitai
+  auto_reply: true

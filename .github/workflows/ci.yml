@@ -11,7 +11,15 @@ on:
     branches:
       - "main"
   workflow_dispatch: # Allows manual execution from the GitHub Actions tab
-
+# Enforce least-privilege security for the GITHUB_TOKEN
+permissions:
+  contents: read
+# TEMPORARY WORKAROUND (Oct 2026): GitHub Runners deprecated Node 20 before
+# official actions (@v4/@v5) updated their internal metadata tags to Node 24.
+# This official flag acknowledges the runtime migration and suppresses warnings.
+# TODO: Remove once actions/checkout and actions/setup-python release native Node 24 tags.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 # 2. PIPELINE JOBS (Sequential Stages: Stage 1 [Lint] -> Stage 2 [Test])
 jobs:
   # =========================================================================
@@ -25,13 +33,14 @@ jobs:
       - name: Checkout repository code
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
+      - name: Set up Python 3.12 with pip cache
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
 
-      - name: Install Ruff
-        run: pip install ruff
+      - name: Install dependencies securely (wheelsonly)
+        run: "pip install --only-binary :all: -r requirements.txt"
 
       - name: Run Ruff Linter
         run: ruff check .
@@ -60,10 +69,8 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
-      - name: Install project dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+      - name: Install dependencies securely (wheelsonly)
+        run: "pip install --only-binary :all: -r requirements.txt"
 
       # Scope Strategy:
       # - On feature branches / PRs: Run fast Smoke Suite (-m smoke)
