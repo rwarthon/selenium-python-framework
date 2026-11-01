@@ -78,13 +78,13 @@ jobs:
       - name: Install dependencies securely (wheels only)
         run: "pip install --only-binary :all: -r requirements.txt"
 
-      # Scope Strategy:
-      # - On feature branches / PRs: Run fast Smoke Suite (-m smoke)
-      # - On main branch (Post-Merge): Run full API Regression Suite (-m api)
-      - name: Run Smoke Suite (Feature / PR Scope)
-        if: github.ref != 'refs/heads/main'
+      # Execution Scope Strategy (3-Phase Lifecycle):
+      # - Phase 1 (Daily Push on working branches): Run fast Smoke Suite (-m smoke)
+      # - Phase 2 (Pull Request Gate) & Phase 3 (Main Merge): Run Full API Suite (-m api)
+      - name: Run Smoke Suite (Daily Push Scope)
+        if: github.event_name != 'pull_request' && github.ref != 'refs/heads/main'
         run: pytest -m smoke
 
-      - name: Run Full API Suite (Main Branch Scope)
-        if: github.ref == 'refs/heads/main'
+      - name: Run Full API Suite (PR Gate & Main Certification Scope)
+        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
         run: pytest -m api
