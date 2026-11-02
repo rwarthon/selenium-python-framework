@@ -192,6 +192,7 @@ selenium-python-framework/
 
 ```bash
 git clone https://github.com/rwarthon/selenium-python-framework.git
+cd selenium-python-framework
 
 # macOS / Linux
 python3 -m venv venv
