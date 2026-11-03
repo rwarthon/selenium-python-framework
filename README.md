@@ -104,8 +104,8 @@ The repository enforces an automated **Shift-Left Quality & Security Model** ("S
 
 ```mermaid
 graph LR
-    subgraph Phase_1 ["Phase 1: Daily Development (Branch Push)"]
-        P1_Trig["Trigger: push to feat/** or fix/**"] --> P1_J1["Job 1: Static Analysis (Ruff)"]
+    subgraph Phase_1 ["Phase 1: Daily Development (Working Branches)"]
+        P1_Trig["Trigger: push / manual on feat/**, fix/**, chore/**"] --> P1_J1["Job 1: Static Analysis (Ruff)"]
         P1_J1 -->|Pass| P1_J2["Job 2: Smoke Suite (-m smoke)"]
     end
 
@@ -218,7 +218,11 @@ pip install -r requirements.txt
 Copy the template file `.env.example` to a new `.env` file and populate the placeholders (`???` and `X`) with your target environment values:
 
 ```bash
+# macOS / Linux / Windows (PowerShell)
 cp .env.example .env
+
+# Windows (CMD)
+copy .env.example .env
 ```
 
 ---
