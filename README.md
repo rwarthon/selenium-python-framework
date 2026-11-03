@@ -114,13 +114,13 @@ graph LR
         P2_J1 -->|Pass| P2_J2["Job 2: Full API Suite (-m api)"]
         P2_Trig --> P2_Sonar["SonarQube Cloud (SAST Check)"]
         P2_Trig --> P2_CR["CodeRabbit AI (Arch Review)"]
-        P2_J2 & P2_Sonar & P2_CR --> P2_Lock{"Branch Protection (Required Checks)"}
+        P2_J2 & P2_Sonar --> P2_Lock{"Branch Protection (Required Checks)"}
+        P2_CR -.->|Advisory Review| P2_Lock
     end
 
     subgraph Phase_3 ["Phase 3: Production Certification (Merge to main)"]
         P3_Trig["Trigger: Merge to main"] --> P3_J1["Job 1: Static Analysis (Ruff)"]
         P3_J1 -->|Pass| P3_J2["Job 2: Full API Suite (-m api)"]
-        P3_J2 --> P3_Badge["Update Live Status Badges"]
     end
 
     DEP["Dependabot (Weekly SCA)"] -.->|Opens Automated PRs| Phase_2
@@ -132,10 +132,10 @@ graph LR
 
 | Diagram Node / Control | Tooling & Configuration | Governance Objective | Enforcement Scope |
 | :--- | :--- | :--- | :--- |
-| **`Job 1: Static Analysis (Ruff)`** | `ruff check` & `ruff format --check` | Enforces PEP 8 compliance, strict type annotations, import sorting, and formatting before spinning up test runners. | Local CLI & GitHub Actions (`Required Check`) |
+| **`Job 1: Static Analysis (Ruff)`** | `ruff check` & `ruff format --check` | Enforces Python linting (Pyflakes / pycodestyle) and consistent code formatting before spinning up test runners. | Local CLI & GitHub Actions (`Required Check`) |
 | **`Job 2: Smoke / Full API Suite`** | `pytest -m smoke` / `pytest -m api` | Executes fast Smoke checks on branch pushes and full E2E API regression on Pull Requests and `main`. | Local CLI & GitHub Actions (`Required Check`) |
-| **`SonarQube Cloud (SAST Check)`** | `.sonarcloud.properties` | Scans source (`config`, `core`, `data`, `services`) and test (`tests`) scopes on Python 3.12 for security hotspots, bugs, and duplication. | Pull Requests & `main` (`Required Check`) |
-| **`CodeRabbit AI (Arch Review)`** | `.coderabbit.yaml` | Audits Pull Requests against custom path rules to prevent 4-layer violations (e.g., blocking direct `requests` calls in `tests/`). | Every Pull Request (Advisory Review) |
+| **`SonarQube Cloud (SAST Check)`** | SonarQube Cloud GitHub App + `.sonarcloud.properties` | Runs automatic SAST analysis on source (`config`, `core`, `data`, `services`) and test (`tests`) scopes on Python 3.12 for bugs, hotspots, and duplication. | Pull Requests & `main` (`Required Check`) |
+| **`CodeRabbit AI (Arch Review)`** | `.coderabbit.yaml` | Audits Pull Requests against custom path rules to prevent 4-layer violations (e.g., blocking direct `requests` calls in `tests/`). | Every Pull Request (`Advisory Review`) |
 | **`Dependabot (Weekly SCA)`** | `.github/dependabot.yml` + Hardened `ci.yml` | Automated weekly dependency PRs, immutable 40-char Action SHAs, `--only-binary :all:` wheel installation, and `contents: read` token permissions. | Automated Weekly PRs & CI Runtime |
 
 ---
@@ -181,7 +181,7 @@ selenium-python-framework/
 - **Test Runner:** `pytest`
 - **HTTP Client:** `requests` (Persistent `Session` pooling)
 - **Data Generation:** `Faker`
-- **Static Analysis & Formatter:** `Ruff` (PEP 8, `isort`, `pyupgrade`, `flake8-pytest-style`)
+- **Static Analysis & Formatter:** `Ruff` (Python linter for Pyflakes/pycodestyle and code formatter)
 - **CI & DevSecOps Governance:** GitHub Actions, SonarQube Cloud (SAST), CodeRabbit AI (Arch Review), Dependabot (SCA)
 
 ---
@@ -198,9 +198,13 @@ cd selenium-python-framework
 python3 -m venv venv
 source venv/bin/activate
 
-# Windows (PowerShell / CMD)
+# Windows (PowerShell)
 python -m venv venv
-venv\Scripts\activate
+.\venv\Scripts\Activate.ps1
+
+# Windows (CMD)
+python -m venv venv
+venv\Scripts\activate.bat
 ```
 
 ### 2. Install dependencies
