@@ -1,5 +1,11 @@
 # Python Test Automation Framework (API & UI)
 
+[![CI Pipeline (Quality Gate & Tests)](https://github.com/rwarthon/selenium-python-framework/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/rwarthon/selenium-python-framework/actions/workflows/ci.yml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=rwarthon_selenium-python-framework&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=rwarthon_selenium-python-framework)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/)
+[![Code Style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Production-grade test automation framework built with **Python**, **Pytest**, and **Requests** (expanding to **Selenium WebDriver**). Designed with strict architectural layering, reusable HTTP connection pooling, dynamic data generation, and automated CI quality gates.
 
 ---
@@ -90,10 +96,58 @@ sequenceDiagram
 
 ---
 
+## CI & DevSecOps Governance Architecture
+
+The repository enforces an automated **Shift-Left Quality & Security Model** ("Swiss Cheese" defense-in-depth) across a **3-Phase Execution Lifecycle**:
+
+### 3-Phase Pipeline Flow
+
+```mermaid
+graph LR
+    subgraph Phase_1 ["Phase 1: Daily Development (Branch Push)"]
+        P1_Trig["Trigger: push to feat/** or fix/**"] --> P1_J1["Job 1: Static Analysis (Ruff)"]
+        P1_J1 -->|Pass| P1_J2["Job 2: Smoke Suite (-m smoke)"]
+    end
+
+    subgraph Phase_2 ["Phase 2: Pull Request (Target: main)"]
+        P2_Trig["Trigger: Open / Sync PR"] --> P2_J1["Job 1: Static Analysis (Ruff)"]
+        P2_J1 -->|Pass| P2_J2["Job 2: Full API Suite (-m api)"]
+        P2_Trig --> P2_Sonar["SonarQube Cloud (SAST Check)"]
+        P2_Trig --> P2_CR["CodeRabbit AI (Arch Review)"]
+        P2_J2 & P2_Sonar --> P2_Lock{"Branch Protection (Required Checks)"}
+        P2_CR -.->|Advisory Review| P2_Lock
+    end
+
+    subgraph Phase_3 ["Phase 3: Production Certification (Merge to main)"]
+        P3_Trig["Trigger: Merge to main"] --> P3_J1["Job 1: Static Analysis (Ruff)"]
+        P3_J1 -->|Pass| P3_J2["Job 2: Full API Suite (-m api)"]
+    end
+
+    DEP["Dependabot (Weekly SCA)"] -.->|Opens Automated PRs| Phase_2
+    Phase_1 -.->|Open PR| Phase_2
+    P2_Lock ==>|Merge Approved| Phase_3
+```
+
+### Multi-Layered Quality & Security Controls (Swiss Cheese Model)
+
+| Diagram Node / Control | Tooling & Configuration | Governance Objective | Enforcement Scope |
+| :--- | :--- | :--- | :--- |
+| **`Job 1: Static Analysis (Ruff)`** | `ruff check` & `ruff format --check` | Enforces Python linting (Pyflakes / pycodestyle) and consistent code formatting before spinning up test runners. | Local CLI & GitHub Actions (`Required Check`) |
+| **`Job 2: Smoke / Full API Suite`** | `pytest -m smoke` / `pytest -m api` | Executes fast Smoke checks on branch pushes and full E2E API regression on Pull Requests and `main`. | Local CLI & GitHub Actions (`Required Check`) |
+| **`SonarQube Cloud (SAST Check)`** | SonarQube Cloud GitHub App + `.sonarcloud.properties` | Runs automatic SAST analysis on source (`config`, `core`, `data`, `services`) and test (`tests`) scopes on Python 3.12 for bugs, hotspots, and duplication. | Pull Requests & `main` (`Required Check`) |
+| **`CodeRabbit AI (Arch Review)`** | `.coderabbit.yaml` | Audits Pull Requests against custom path rules to prevent 4-layer violations (e.g., blocking direct `requests` calls in `tests/`). | Every Pull Request (`Advisory Review`) |
+| **`Dependabot (Weekly SCA)`** | `.github/dependabot.yml` + Hardened `ci.yml` | Automated weekly dependency PRs, immutable 40-char Action SHAs, `--only-binary :all:` wheel installation, and `contents: read` token permissions. | Automated Weekly PRs & CI Runtime |
+
+---
+
 ## Project Structure
 
 ```text
 selenium-python-framework/
+├── .github/
+│   ├── dependabot.yml         # Automated SCA weekly checks (pip & github-actions)
+│   └── workflows/
+│       └── ci.yml             # Hardened CI Pipeline (Job 1: Ruff -> Job 2: Pytest)
 ├── config/
 │   ├── config.py              # Environment variable loader and global settings
 │   └── endpoints.py           # Centralized API endpoint routes
@@ -106,25 +160,29 @@ selenium-python-framework/
 ├── tests/
 │   ├── conftest.py            # Dependency injection and lifecycle fixtures
 │   └── booking_api/
-│       └── test_booking.py    # API smoke and functional test suites
+│       └── test_booking.py    # API smoke and functional regression suites
+├── .coderabbit.yaml           # AI Reviewer architectural instructions per layer
 ├── .env.example               # Template for required environment variables
 ├── .gitignore                 # Git exclusion rules
+├── .sonarcloud.properties     # SonarQube Cloud Python 3.12 & scope configuration
+├── LICENSE                    # MIT Open Source License
 ├── pytest.ini                 # Pytest configuration and registered markers
-└── requirements.txt           # Pinned project dependencies
+├── README.md                  # Architecture, governance, and execution documentation
+└── requirements.txt           # Frozen project dependencies (pip freeze)
 ```
 
 ---
 
 ## Tech Stack & Quality Tooling
 
-*(Exact pinned library versions are managed in `requirements.txt`)*
+*(Exact frozen library versions are managed in `requirements.txt` and monitored weekly by Dependabot)*
 
-* **Language:** Python 3.10+
-* **Test Runner:** `pytest`
-* **HTTP Client:** `requests` (Persistent `Session` pooling)
-* **Data Generation:** `Faker`
-* **Static Analysis & Linting:** `Ruff` (PEP 8, `isort`, `pyupgrade`, `flake8-pytest-style`)
-* **CI/CD:** GitHub Actions
+- **Language:** Python 3.12
+- **Test Runner:** `pytest`
+- **HTTP Client:** `requests` (Persistent `Session` pooling)
+- **Data Generation:** `Faker`
+- **Static Analysis & Formatter:** `Ruff` (Python linter for Pyflakes/pycodestyle and code formatter)
+- **CI & DevSecOps Governance:** GitHub Actions, SonarQube Cloud (SAST), CodeRabbit AI (Arch Review), Dependabot (SCA)
 
 ---
 
@@ -133,10 +191,20 @@ selenium-python-framework/
 ### 1. Clone the repository and create a virtual environment
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/rwarthon/selenium-python-framework.git
 cd selenium-python-framework
+
+# macOS / Linux
 python3 -m venv venv
 source venv/bin/activate
+
+# Windows (PowerShell)
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+
+# Windows (CMD)
+python -m venv venv
+venv\Scripts\activate.bat
 ```
 
 ### 2. Install dependencies
@@ -150,27 +218,32 @@ pip install -r requirements.txt
 Copy the template file `.env.example` to a new `.env` file and populate the placeholders (`???` and `X`) with your target environment values:
 
 ```bash
+# macOS / Linux / Windows (PowerShell)
 cp .env.example .env
+
+# Windows (CMD)
+copy .env.example .env
 ```
 
 ---
 
-## Running Tests & Quality Checks
+## Running Tests & Quality Checks Locally
 
-### Run Smoke Test Suite
+### 1. Run Static Analysis & Format Check (Job 1 Gate)
+
+```bash
+ruff check .
+ruff format --check .
+```
+
+### 2. Run Fast Smoke Suite (Phase 1 Scope)
 
 ```bash
 pytest -m smoke
 ```
 
-### Run All API Tests
+### 3. Run Full API Regression Suite (Phase 2 & 3 Scope)
 
 ```bash
 pytest -m api
-```
-
-### Run Static Code Analysis (Ruff)
-
-```bash
-ruff check .
 ```
