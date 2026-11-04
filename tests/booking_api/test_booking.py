@@ -7,14 +7,22 @@ from services.booking_service import BookingService
 
 
 @pytest.mark.api
-@pytest.mark.smoke
-def test_health_check(booking_service: BookingService) -> None:
-    """Verify that the Booking API server is up and responding to ping."""
-    # Arrange: Handled implicitly via the booking_service fixture
-    # Act: Send health check request
-    response = booking_service.ping()
-    # Assert: Restful-Booker returns 201 Created for /ping health check
-    assert response.status_code == 201, f"Expected 201, but got {response.status_code}"
+class testPing:
+    """Test suite for the /ping health check endpoint."""
+
+    @pytest.mark.smoke
+    def test_health_check(booking_service: BookingService) -> None:
+        """Verify that the Booking API server is up and responding to ping."""
+        # Arrange: Handled implicitly via the booking_service fixture
+        # Act: Send health check request
+        response = booking_service.ping()
+        # Assert: Restful-Booker returns 201 Created and plain-text body 'Created'
+        assert response.status_code == 201, (
+            f"Expected 201, but got {response.status_code}"
+        )
+        assert response.text == "Created", (
+            f"Expecteed 'Created' response body, but got {response.text}"
+        )
 
 
 @pytest.mark.api
