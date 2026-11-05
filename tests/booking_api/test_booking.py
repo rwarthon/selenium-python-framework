@@ -7,11 +7,11 @@ from services.booking_service import BookingService
 
 
 @pytest.mark.api
-class testPing:
+class TestPing:
     """Test suite for the /ping health check endpoint."""
 
     @pytest.mark.smoke
-    def test_health_check(booking_service: BookingService) -> None:
+    def test_health_check(self, booking_service: BookingService) -> None:
         """Verify that the Booking API server is up and responding to ping."""
         # Arrange: Handled implicitly via the booking_service fixture
         # Act: Send health check request
@@ -21,7 +21,7 @@ class testPing:
             f"Expected 201, but got {response.status_code}"
         )
         assert response.text == "Created", (
-            f"Expecteed 'Created' response body, but got {response.text}"
+            f"Expected 'Created' response body, but got {response.text}"
         )
 
 

@@ -28,13 +28,8 @@ class BookingService:
         """Perform a health check on the API server."""
         return self.client.get(BookingEndpoints.PING)
 
-    def authenticate(
-        self,
-        username: str = Config.BOOKING_USERNAME,
-        password: str = Config.BOOKING_PASSWORD,
-    ) -> Response:
+    def authenticate(self, payload: dict[str, Any]) -> Response:
         """Request an authentication token using user credentials."""
-        payload = {"username": username, "password": password}
         return self.client.post(BookingEndpoints.AUTH, payload=payload)
 
     def get_all_bookings(self, params: dict[str, Any] | None = None) -> Response:
@@ -51,26 +46,37 @@ class BookingService:
         return self.client.post(BookingEndpoints.BOOKING, payload=payload)
 
     def update_booking(
-        self, booking_id: int, payload: dict[str, Any], token: str
+        self, booking_id: int, payload: dict[str, Any], token: str | None
     ) -> Response:
         """Fully update an existing booking (PUT) using token authentication."""
         endpoint = BookingEndpoints.booking_detail(booking_id)
         # Inject auth token via Cookie header as required by Restful-Booker
-        auth_headers = {"Cookie": f"token={token}"}
+        if token is not None:
+            auth_headers = {"Cookie": f"token={token}"}
+        else:
+            auth_headers = None
         return self.client.put(endpoint, payload=payload, headers=auth_headers)
 
     def partial_update_booking(
-        self, booking_id: int, payload: dict[str, Any], token: str
+        self, booking_id: int, payload: dict[str, Any], token: str | None
     ) -> Response:
         """Partially update an existing booking (PATCH) using token authentication."""
         endpoint = BookingEndpoints.booking_detail(booking_id)
-        auth_headers = {"Cookie": f"token={token}"}
+        # Inject auth token via Cookie header as required by Restful-Booker
+        if token is not None:
+            auth_headers = {"Cookie": f"token={token}"}
+        else:
+            auth_headers = None
         return self.client.patch(endpoint, payload=payload, headers=auth_headers)
 
-    def delete_booking(self, booking_id: int, token: str) -> Response:
+    def delete_booking(self, booking_id: int, token: str | None) -> Response:
         """Delete an existing booking by its ID using token authentication."""
         endpoint = BookingEndpoints.booking_detail(booking_id)
-        auth_headers = {"Cookie": f"token={token}"}
+        # Inject auth token via Cookie header as required by Restful-Booker
+        if token is not None:
+            auth_headers = {"Cookie": f"token={token}"}
+        else:
+            auth_headers = None
         return self.client.delete(endpoint, headers=auth_headers)
 
     def close(self) -> None:

@@ -4,6 +4,7 @@ from collections.abc import Iterator
 
 import pytest
 
+from data.booking_data import BookingData
 from services.booking_service import BookingService
 
 
@@ -22,7 +23,8 @@ def booking_service() -> Iterator[BookingService]:
 def auth_token() -> str:
     """Fetch and return a valid authentication token once per test session."""
     service = BookingService()
-    response = service.authenticate()
+    payload = BookingData.valid_auth_payload()
+    response = service.authenticate(payload)
     # Close session immediately after receiving response to prevent connection leaks
     service.close()
     # Precondition check: Abort session setup if authentication fails

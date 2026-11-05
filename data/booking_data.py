@@ -5,12 +5,25 @@ from typing import Any
 
 from faker import Faker
 
+from config.config import Config
+
 # Initialize Faker instance once at module level to avoid reloading dictionaries
 fake = Faker()
 
 
 class BookingData:
     """Generate structured and dynamic payloads for booking API tests."""
+
+    @staticmethod
+    def valid_auth_payload(**overrides: Any) -> dict[str, Any]:
+        """Generate a valid authentication payload, allowing specific field overrides."""
+        payload = dict[str, Any] = {
+            "username": Config.BOOKING_USERNAME,
+            "password": Config.BOOKING_PASSWORD,
+        }
+        # Override default credentials if specific values are passed
+        payload.update(overrides)
+        return payload
 
     @staticmethod
     def valid_booking_payload(**overrides: Any) -> dict[str, Any]:
