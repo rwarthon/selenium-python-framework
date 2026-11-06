@@ -1,5 +1,7 @@
 """Test suite for Restful-Booker API operations."""
 
+from typing import Any
+
 import pytest
 
 from data.booking_data import BookingData
@@ -22,6 +24,117 @@ class TestPing:
         )
         assert response.text == "Created", (
             f"Expected 'Created' response body, but got {response.text}"
+        )
+
+
+@pytest.mark.api
+class TestAuth:
+    """Test suite for the /auth authentication endpoint."""
+
+    @pytest.mark.smoke
+    def test_auth_valid_credentials(self, booking_service: BookingService) -> None:
+        """Verify that valid credentials return a 200 status and a non-empty token."""
+        # Arrange: Generate valid authentication payload from environment config
+        payload = BookingData.valid_auth_payload()
+        # Act: Request authentication token
+        response = booking_service.authenticate(payload)
+        # Assert: Verify HTTP 200 and non-empty string token in response JSON
+        assert response.status_code == 200, (
+            f"Expected 200, but got {response.status_code}"
+        )
+        body = response.json()
+        assert "token" in body, "Expected 'token' key in authentication response"
+        assert isinstance(body["token"], str), (
+            f"Expected token to be str, but got {type(body['token'])}"
+        )
+        assert len(body["token"]) > 0, "Expected non-empty authentication token"
+
+    @pytest.mark.parametrize(
+        ("case_id", "payload"),
+        BookingData.invalid_auth_credentials(),
+    )
+    def test_auth_invalid_credentials(
+        self,
+        booking_service: BookingService,
+        case_id: str,
+        payload: dict[str, Any],
+    ) -> None:
+        """Verify that invalid string credentials never return a token."""
+        # Arrange: Provided via parametrize (case_id and mutated payload)
+        # Act: Attempt authentication with invalid string credentials
+        response = booking_service.authenticate(payload)
+        # Assert: Audit note - Restful-Booker returns 200 OK instead of 401
+        # (HTTP 401 standard compliance is audited in test_auth_invalid_credentials_returns_401)
+        assert response.status_code == 200, (
+            f"[{case_id}]Expected 200, but got {response.status_code}"
+        )
+        body = response.json()
+        assert "token" not in body, (
+            f"[{case_id}] Security breach: 'token' returned for invalid credentials"
+        )
+        assert body.get("reason") == "Bad credentials", (
+            f"[{case_id}] Expected 'Bad credentials', but got '{body.get('reason')}'"
+        )
+
+    @pytest.mark.parametrize(
+        ("case_id", "payload"),
+        BookingData.malformed_auth_payloads(),
+    )
+    def test_auth_empty_or_malformed_payloads(
+        self,
+        booking_service: BookingService,
+        case_id: str,
+        payload: dict[str, Any],
+    ) -> None:
+        """Verify that empty or malformed payloads are rejected without leaking a token."""
+        # Arrange: Provided via parametrize (case_id and malformed payload)
+        # Act: Send authentication request with malformed or incomplete data
+        response = booking_service.authenticate(payload)
+        # Assert: Audit note - Restful-Booker returns 200 OK instead of 400
+        # (HTTP 400 standard compliance is audited in test_auth_malformed_payload_returns_400)
+        assert response.status_code == 200, (
+            f"[{case_id}]Expected 200, but got {response.status_code}"
+        )
+        body = response.json()
+        assert "token" not in body, (
+            f"[{case_id}] Security breach: 'token' returned for malformed payload"
+        )
+
+    @pytest.mark.xfail(
+        reason="Audit defect: Restful-Booker returns 200 OK instead of 401 Unauthorized",
+        strict=True,
+    )
+    def test_auth_invalid_credentials_returns_401(
+        self, booking_service: BookingService
+    ) -> None:
+        """Audit that invalid credentials should return HTTP 401 per REST standards."""
+        # Arrange: Request a representative invalid credential payload from data layer
+        payload = BookingData.invalid_auth_payload()
+        # Act: Attempt authentication with invalid credentials
+        response = BookingService.authenticate(payload)
+        # Assert: Expect standard 401 Unauthorized status code
+        assert response.status_code == 401, (
+            f"Expected 401 Unauthorized, but got {response.status_code}"
+        )
+
+    @pytest.mark.xfail(
+        reason=(
+            "Audit defect: Restful-Booker returns 200 OK with 'Bad credentials' "
+            "instead of 400 Bad Request on empty JSON schema"
+        ),
+        strict=True,
+    )
+    def test_auth_malformed_payload_returns_400(
+        self, booking_service: BookingService
+    ) -> None:
+        """Audit that an empty payload should return HTTP 400 Bad Request."""
+        # Arrange: Request an empty JSON payload from data layer
+        payload = BookingData.empty_payload()
+        # Act: Send empty payload to authentication endpoint
+        response = BookingService.authenticate(payload)
+        # Assert: Expect standard 400 Bad Request status code
+        assert response.status_code == 400, (
+            f"Expected 400 Bad Request, but got {response.status_code}"
         )
 
 
