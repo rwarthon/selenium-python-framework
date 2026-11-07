@@ -18,12 +18,30 @@ class TestPing:
         # Arrange: Handled implicitly via the booking_service fixture
         # Act: Send health check request
         response = booking_service.ping()
-        # Assert: Restful-Booker returns 201 Created and plain-text body 'Created'
+        # Assert: Audit note - Restful-Booker returns 201 instead of 200
+        # (RFC 9110 standard compliance is audited in test_health_check_returns_200_ok)
         assert response.status_code == 201, (
             f"Expected 201, but got {response.status_code}"
         )
         assert response.text == "Created", (
             f"Expected 'Created' response body, but got {response.text}"
+        )
+
+    @pytest.mark.xfail(
+        reason=(
+            "Audit defect: Restful-Booker returns 201 Created instead of "
+            "200 OK on an idempotent GET health check per RFC 9110"
+        ),
+        strict=True,
+    )
+    def test_health_check_returns_200_ok(self, booking_service: BookingService) -> None:
+        """Audit that GET /ping should return HTTP 200 OK per REST standards."""
+        # Arrange: Handled implicitly via the booking_service fixture
+        # Act: Send health check request
+        response = booking_service.ping()
+        # Assert: Expect standard 200 OK status code for a read-only GET request
+        assert response.status_code == 200, (
+            f"Expected 200 OK, but got {response.status_code}"
         )
 
 
