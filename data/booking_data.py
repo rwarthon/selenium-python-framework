@@ -37,7 +37,7 @@ class BookingData:
             ),
             (
                 "incorrect_password",
-                BookingData.valid_auth_payload(username=fake.password()),
+                BookingData.valid_auth_payload(password=fake.password()),
             ),
             # Partition B: Case sensitivity (.upper())
             (
@@ -49,7 +49,7 @@ class BookingData:
             (
                 "uppercase_password",
                 BookingData.valid_auth_payload(
-                    username=Config.BOOKING_PASSWORD.upper()
+                    password=Config.BOOKING_PASSWORD.upper()
                 ),
             ),
             # Partition C: Leading and trailing whitespace
@@ -59,7 +59,7 @@ class BookingData:
             ),
             (
                 "whitespace_password",
-                BookingData.valid_auth_payload(username=f" {Config.BOOKING_PASSWORD} "),
+                BookingData.valid_auth_payload(password=f" {Config.BOOKING_PASSWORD} "),
             ),
             # Partition D: Special characters / punctuation strings
             (
@@ -71,7 +71,7 @@ class BookingData:
             (
                 "special_chars_password",
                 BookingData.valid_auth_payload(
-                    username=f"{Config.BOOKING_PASSWORD}{string.punctuation}"
+                    password=f"{Config.BOOKING_PASSWORD}{string.punctuation}"
                 ),
             ),
         ]
@@ -166,8 +166,8 @@ class BookingData:
             "depositpaid": fake.boolean(),
             "bookingdates": {
                 # Format dates as YYYY-MM-DD strings required by the API contract
-                "checkin": checkin_date.strftime("%Y-%m-%d"),
-                "checkout": checkout_date.strftime("%Y-%m-%d"),
+                "checkin": checkin_date.isoformat(),
+                "checkout": checkout_date.isoformat(),
             },
             "additionalneeds": fake.random_element(
                 elements=("Breakfast", "Late Checkout", "Airport Shuttle", "Extra Bed")
@@ -176,3 +176,32 @@ class BookingData:
         # Mutate default random values if specific fields are passed via kwargs
         payload.update(overrides)
         return payload
+
+    @staticmethod
+    def valid_booking_variations() -> list[tuple[str, dict[str, Any]]]:
+        """Generate valid contract variations and boundary payloads for create booking."""
+        payload_without_optional = BookingData.valid_booking_payload()
+        payload_without_optional.pop("additionalneeds")
+        checkin_date = date.today() + timedelta(days=fake.random_int(min=1, max=30))
+        checkout_date = checkin_date + timedelta(days=1)
+        one_night_dates = {
+            "checkin": checkin_date.isoformat(),
+            "checkout": checkout_date.isoformat(),
+        }
+        return [
+            # Contract variation: Omit implicit optional field 'additionalneeds'
+            (
+                "without_additionalneeds",
+                payload_without_optional,
+            ),
+            # Boundary Value Analysis (BVA): Minimum positive integer price ($1)
+            (
+                "minimum_valid_totalprice",
+                BookingData.valid_booking_payload(totalprice=1),
+            ),
+            # Boundary Value Analysis (BVA): Minimum valid hotel stay (1 night)
+            (
+                "one_night_minimum_stay",
+                BookingData.valid_booking_payload(bookingdates=one_night_dates),
+            ),
+        ]

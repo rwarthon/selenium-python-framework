@@ -78,13 +78,13 @@ class TestAuth:
         payload: dict[str, Any],
     ) -> None:
         """Verify that invalid string credentials never return a token."""
-        # Arrange: Provided via parametrize (case_id and mutated payload)
+        # Arrange: Provided via parametrize (case_id and payload)
         # Act: Attempt authentication with invalid string credentials
         response = booking_service.authenticate(payload)
         # Assert: Audit note - Restful-Booker returns 200 OK instead of 401
         # (HTTP 401 standard compliance is audited in test_auth_invalid_credentials_returns_401)
         assert response.status_code == 200, (
-            f"[{case_id}]Expected 200, but got {response.status_code}"
+            f"[{case_id}] Expected 200, but got {response.status_code}"
         )
         body = response.json()
         assert "token" not in body, (
@@ -105,13 +105,13 @@ class TestAuth:
         payload: dict[str, Any],
     ) -> None:
         """Verify that empty or malformed payloads are rejected without leaking a token."""
-        # Arrange: Provided via parametrize (case_id and malformed payload)
+        # Arrange: Provided via parametrize (case_id and payload)
         # Act: Send authentication request with malformed or incomplete data
         response = booking_service.authenticate(payload)
         # Assert: Audit note - Restful-Booker returns 200 OK instead of 400
         # (HTTP 400 standard compliance is audited in test_auth_malformed_payload_returns_400)
         assert response.status_code == 200, (
-            f"[{case_id}]Expected 200, but got {response.status_code}"
+            f"[{case_id}] Expected 200, but got {response.status_code}"
         )
         body = response.json()
         assert "token" not in body, (
@@ -129,7 +129,7 @@ class TestAuth:
         # Arrange: Request a representative invalid credential payload from data layer
         payload = BookingData.invalid_auth_payload()
         # Act: Attempt authentication with invalid credentials
-        response = BookingService.authenticate(payload)
+        response = booking_service.authenticate(payload)
         # Assert: Expect standard 401 Unauthorized status code
         assert response.status_code == 401, (
             f"Expected 401 Unauthorized, but got {response.status_code}"
@@ -149,7 +149,7 @@ class TestAuth:
         # Arrange: Request an empty JSON payload from data layer
         payload = BookingData.empty_payload()
         # Act: Send empty payload to authentication endpoint
-        response = BookingService.authenticate(payload)
+        response = booking_service.authenticate(payload)
         # Assert: Expect standard 400 Bad Request status code
         assert response.status_code == 400, (
             f"Expected 400 Bad Request, but got {response.status_code}"
@@ -157,22 +157,68 @@ class TestAuth:
 
 
 @pytest.mark.api
-@pytest.mark.smoke
-def test_create_and_verify_booking(booking_service: BookingService) -> None:
-    """Verify booking creation via POST and data persistence via GET."""
-    # Arrange: Generate dynamic booking payload
-    payload = BookingData.valid_booking_payload()
-    # Act 1: Create the booking
-    post_response = booking_service.create_booking(payload)
-    # Assert 1: Verify creation status, ID generation, and returned booking object
-    assert post_response.status_code == 200
-    post_data = post_response.json()
-    assert "bookingid" in post_data
-    assert isinstance(post_data["bookingid"], int)
-    assert post_data["booking"] == payload
-    # Act 2: Retrieve the created booking by ID to confirm backend persistence
-    booking_id = post_data["bookingid"]
-    get_response = booking_service.get_booking(booking_id)
-    # Assert 2: Verify persisted record matches the original payload exactly
-    assert get_response.status_code == 200
-    assert get_response.json() == payload
+class TestCreateBooking:
+    """Test suite for the /booking creation endpoint."""
+
+    @pytest.mark.smoke
+    def test_create_and_verify_booking(self, booking_service: BookingService) -> None:
+        """Verify booking creation via POST and data persistence via GET."""
+        # Arrange: Generate dynamic booking payload
+        payload = BookingData.valid_booking_payload()
+        # Act: Create the booking via POST /booking
+        create_response = booking_service.create_booking(payload)
+        # Assert: Audit note - Restful-Booker returns 200 OK instead of 201 Created
+        # (RFC 9110 standard compliance is audited in test_create_booking_returns_201_created)
+        assert create_response.status_code == 200, (
+            f"Expected 200, but got {create_response.status_code}"
+        )
+        create_body = create_response.json()
+        assert "bookingid" in create_body, "Expected 'bookingid' key in create response"
+        booking_id = create_body["bookingid"]
+        assert isinstance(booking_id, int), (
+            f"Expected 'bookingid' to be int, but got {type(booking_id)}"
+        )
+        assert create_body.get("booking") == payload, (
+            f"Expected booking {payload}, but got {create_body.get('booking')}"
+        )
+        # Act: Retrieve the created booking via GET /booking/{id} to confirm backend persistence
+        get_response = booking_service.get_booking(booking_id)
+        # Assert: Verify persisted record matches the original payload exactly
+        assert get_response.status_code == 200, (
+            f"Expected 200 on GET, but got {get_response.status_code}"
+        )
+        get_body = get_response.json()
+        assert get_body == payload, (
+            f"Expected persisted booking {payload}, but got {get_body}"
+        )
+
+    @pytest.mark.parametrize(
+        ("case_id", "payload"),
+        BookingData.valid_booking_variations(),
+    )
+    def test_create_booking_valid_variations(
+        self,
+        booking_service: BookingService,
+        case_id: str,
+        payload: dict[str, Any],
+    ) -> None:
+        """Verify that valid schema variations and boundary values succeed."""
+        # Arrange: Provided via parametrize (case_id and payload)
+        # Act: Create the booking via POST /booking
+        response = booking_service.create_booking(payload)
+        # Assert: Audit note - 'additionalneeds' is undocumented as optional in API spec,
+        # and endpoint returns 200 OK instead of 201 Created
+        assert response.status_code == 200, (
+            f"[{case_id}] Expected 200, but got {response.status_code}"
+        )
+        body = response.json()
+        assert "bookingid" in body, (
+            f"[{case_id}] Expected 'bookingid' key in create response"
+        )
+        booking_id = body["bookingid"]
+        assert isinstance(booking_id, int), (
+            f"[{case_id}] Expected 'bookingid' to be int, but got {type(booking_id)}"
+        )
+        assert body.get("booking") == payload, (
+            f"[{case_id}] Expected booking {payload}, but got {body.get('booking')}"
+        )
