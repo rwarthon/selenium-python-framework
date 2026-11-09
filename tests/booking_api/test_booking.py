@@ -222,3 +222,26 @@ class TestCreateBooking:
         assert body.get("booking") == payload, (
             f"[{case_id}] Expected booking {payload}, but got {body.get('booking')}"
         )
+
+    @pytest.mark.parametrize(
+        ("case_id", "payload"),
+        BookingData.missing_required_booking_fields(),
+    )
+    def test_create_booking_missing_required_fields(
+        self,
+        booking_service: BookingService,
+        case_id: str,
+        payload: dict[str, Any],
+    ) -> None:
+        """Verify that omitting any required schema field rejects booking creation."""
+        # Arrange: Provided via parametrize (case_id and payload)
+        # Act: Create the booking via POST /booking
+        response = booking_service.create_booking(payload)
+        # Assert: Audit note - Restful-Booker returns 500 Internal Server Error instead of 400
+        # (HTTP 400 standard compliance is audited in test_create_booking_missing_fields_returns_400)
+        assert response.status_code == 500, (
+            f"[{case_id}] Expected 500, but got {response.status_code}"
+        )
+        assert response.text == "Internal Server Error", (
+            f"[{case_id}] Expected 'Internal Server Error' response body, but got {response.text}"
+        )

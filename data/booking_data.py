@@ -92,15 +92,15 @@ class BookingData:
             # Partition F: Missing keys / Structural schema (3 sides)
             (
                 "missing_username_key",
-                {"password": Config.BOOKING_PASSWORD},
+                BookingData.remove_key(BookingData.valid_auth_payload(), "username"),
             ),
             (
                 "missing_password_key",
-                {"username": Config.BOOKING_USERNAME},
+                BookingData.remove_key(BookingData.valid_auth_payload(), "password"),
             ),
             (
                 "empty_json_object",
-                {},
+                BookingData.empty_payload(),
             ),
             # Partition G: Integer data type (Single-Fault - 2 sides)
             (
@@ -180,8 +180,6 @@ class BookingData:
     @staticmethod
     def valid_booking_variations() -> list[tuple[str, dict[str, Any]]]:
         """Generate valid contract variations and boundary payloads for create booking."""
-        payload_without_optional = BookingData.valid_booking_payload()
-        payload_without_optional.pop("additionalneeds")
         checkin_date = date.today() + timedelta(days=fake.random_int(min=1, max=30))
         checkout_date = checkin_date + timedelta(days=1)
         one_night_dates = {
@@ -192,7 +190,9 @@ class BookingData:
             # Contract variation: Omit implicit optional field 'additionalneeds'
             (
                 "without_additionalneeds",
-                payload_without_optional,
+                BookingData.remove_key(
+                    BookingData.valid_booking_payload(), "additionalneeds"
+                ),
             ),
             # Boundary Value Analysis (BVA): Minimum positive integer price ($1)
             (
@@ -203,5 +203,67 @@ class BookingData:
             (
                 "one_night_minimum_stay",
                 BookingData.valid_booking_payload(bookingdates=one_night_dates),
+            ),
+        ]
+
+    @staticmethod
+    def remove_key(payload: dict[str, Any], *keys: str) -> dict[str, Any]:
+        """Remove a root or nested key path from a dictionary payload."""
+        target = payload
+        for key in keys[:-1]:
+            target = target[key]
+        target.pop(keys[-1])
+        return payload
+
+    @staticmethod
+    def missing_required_booking_fields() -> list[tuple[str, dict[str, Any]]]:
+        """Generate single-fault payloads missing one required key at a time."""
+        return [
+            # Root-level required schema keys (5 sides)
+            (
+                "missing_firstname",
+                BookingData.remove_key(
+                    BookingData.valid_booking_payload(), "firstname"
+                ),
+            ),
+            (
+                "missing_lastname",
+                BookingData.remove_key(BookingData.valid_booking_payload(), "lastname"),
+            ),
+            (
+                "missing_totalprice",
+                BookingData.remove_key(
+                    BookingData.valid_booking_payload(), "totalprice"
+                ),
+            ),
+            (
+                "missing_depositpaid",
+                BookingData.remove_key(
+                    BookingData.valid_booking_payload(), "depositpaid"
+                ),
+            ),
+            (
+                "missing_bookingdates",
+                BookingData.remove_key(
+                    BookingData.valid_booking_payload(), "bookingdates"
+                ),
+            ),
+            # Nested required schema keys inside 'bookingdates' (2 sides)
+            (
+                "missing_checkin",
+                BookingData.remove_key(
+                    BookingData.valid_booking_payload(), "bookingdates", "checkin"
+                ),
+            ),
+            (
+                "missing_checkout",
+                BookingData.remove_key(
+                    BookingData.valid_booking_payload(), "bookingdates", "checkout"
+                ),
+            ),
+            # Structural edge case: Empty JSON object (1 side)
+            (
+                "empty_json_object",
+                BookingData.empty_payload(),
             ),
         ]
