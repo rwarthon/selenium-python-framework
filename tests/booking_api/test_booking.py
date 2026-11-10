@@ -238,7 +238,30 @@ class TestCreateBooking:
         # Act: Create the booking via POST /booking
         response = booking_service.create_booking(payload)
         # Assert: Audit note - Restful-Booker returns 500 Internal Server Error instead of 400
-        # (HTTP 400 standard compliance is audited in test_create_booking_missing_fields_returns_400)
+        # (HTTP 400 standard compliance is audited in test_create_booking_invalid_schema_returns_400)
+        assert response.status_code == 500, (
+            f"[{case_id}] Expected 500, but got {response.status_code}"
+        )
+        assert response.text == "Internal Server Error", (
+            f"[{case_id}] Expected 'Internal Server Error' response body, but got {response.text}"
+        )
+
+    @pytest.mark.parametrize(
+        ("case_id", "payload"),
+        BookingData.unhandled_booking_field_types(),
+    )
+    def test_create_booking_unhandled_field_type_exceptions(
+        self,
+        booking_service: BookingService,
+        case_id: str,
+        payload: dict[str, Any],
+    ) -> None:
+        """Verify that incompatible field types breaking the backend parser reject creation."""
+        # Arrange: Provided via parametrize (case_id and payload)
+        # Act: Create the booking via POST /booking
+        response = booking_service.create_booking(payload)
+        # Assert: Audit note - Restful-Booker returns 500 Internal Server Error instead of 400
+        # (HTTP 400 standard compliance is audited in test_create_booking_invalid_schema_returns_400)
         assert response.status_code == 500, (
             f"[{case_id}] Expected 500, but got {response.status_code}"
         )

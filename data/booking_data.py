@@ -267,3 +267,24 @@ class BookingData:
                 BookingData.empty_payload(),
             ),
         ]
+
+    @staticmethod
+    def unhandled_booking_field_types() -> list[tuple[str, dict[str, Any]]]:
+        """Generate incompatible field types that trigger unhandled 500 server exceptions."""
+        return [
+            # Integer in string field: breaks backend string operations on firstname
+            (
+                "non_string_firstname",
+                BookingData.valid_booking_payload(firstname=fake.random_int()),
+            ),
+            # Integer in string field: breaks backend string operations on lastname
+            (
+                "non_string_lastname",
+                BookingData.valid_booking_payload(lastname=fake.random_int()),
+            ),
+            # Scalar string in dict field: breaks backend property access on bookingdates
+            (
+                "non_dict_bookingdates",
+                BookingData.valid_booking_payload(bookingdates=fake.word()),
+            ),
+        ]
