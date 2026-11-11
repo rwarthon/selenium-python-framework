@@ -288,3 +288,50 @@ class BookingData:
                 BookingData.valid_booking_payload(bookingdates=fake.word()),
             ),
         ]
+
+    @staticmethod
+    def replace_key(payload: dict[str, Any], value: Any, *keys: str) -> dict[str, Any]:
+        """Replace an existing root or nested key value in a dictionary payload."""
+        target = payload
+        for key in keys[:-1]:
+            target = target[key]
+        if keys[-1] not in target:
+            raise KeyError(keys[-1])
+        target[keys[-1]] = value
+        return payload
+
+    @staticmethod
+    def coerced_booking_field_types() -> list[tuple[str, dict[str, Any]]]:
+        """Generate incompatible field types silently coerced by the backend."""
+        return [
+            # Alphabetic string in integer field: backend coerces to null
+            (
+                "non_numeric_totalprice",
+                BookingData.valid_booking_payload(totalprice=fake.word()),
+            ),
+            # Non-empty string in boolean field: backend evaluates as truthy (true)
+            (
+                "non_boolean_depositpaid",
+                BookingData.valid_booking_payload(depositpaid=fake.word()),
+            ),
+            # Boolean in string date field: backend coerces True to Unix Epoch 1970-01-01
+            (
+                "non_string_checkin",
+                BookingData.replace_key(
+                    BookingData.valid_booking_payload(),
+                    True,
+                    "bookingdates",
+                    "checkin",
+                ),
+            ),
+            # Boolean in string date field: backend coerces True to Unix Epoch 1970-01-01
+            (
+                "non_string_checkout",
+                BookingData.replace_key(
+                    BookingData.valid_booking_payload(),
+                    True,
+                    "bookingdates",
+                    "checkout",
+                ),
+            ),
+        ]

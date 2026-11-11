@@ -268,3 +268,29 @@ class TestCreateBooking:
         assert response.text == "Internal Server Error", (
             f"[{case_id}] Expected 'Internal Server Error' response body, but got {response.text}"
         )
+
+    @pytest.mark.xfail(
+        reason=(
+            "Audit defect: Restful-Booker silently coerces incompatible field types "
+            "and returns 200 OK instead of 400 Bad Request"
+        ),
+        strict=True,
+    )
+    @pytest.mark.parametrize(
+        ("case_id", "payload"),
+        BookingData.coerced_booking_field_types(),
+    )
+    def test_create_booking_coerced_field_types(
+        self,
+        booking_service: BookingService,
+        case_id: str,
+        payload: dict[str, Any],
+    ) -> None:
+        """Audit that incompatible field types should return HTTP 400 instead of coercing."""
+        # Arrange: Provided via parametrize (case_id and payload)
+        # Act: Create the booking via POST /booking
+        response = booking_service.create_booking(payload)
+        # Assert: Expect standard 400 Bad Request when field types violate schema contract
+        assert response.status_code == 400, (
+            f"[{case_id}] Expected 400 Bad Request, but got {response.status_code}"
+        )
