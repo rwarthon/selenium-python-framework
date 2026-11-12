@@ -156,19 +156,15 @@ class BookingData:
     @staticmethod
     def valid_booking_payload(**overrides: Any) -> dict[str, Any]:
         """Generate a valid booking payload, allowing specific field overrides."""
-        # Calculate dynamic future dates so tests never expire over time
-        checkin_date = date.today() + timedelta(days=fake.random_int(min=1, max=30))
-        checkout_date = checkin_date + timedelta(days=fake.random_int(min=1, max=14))
         payload: dict[str, Any] = {
             "firstname": fake.first_name(),
             "lastname": fake.last_name(),
             "totalprice": fake.random_int(min=50, max=2000),
             "depositpaid": fake.boolean(),
-            "bookingdates": {
-                # Format dates as YYYY-MM-DD strings required by the API contract
-                "checkin": checkin_date.isoformat(),
-                "checkout": checkout_date.isoformat(),
-            },
+            "bookingdates": BookingData.booking_dates(
+                checkin_offset_days=fake.random_int(min=1, max=30),
+                stay_nights=fake.random_int(min=1, max=14),
+            ),
             "additionalneeds": fake.random_element(
                 elements=("Breakfast", "Late Checkout", "Airport Shuttle", "Extra Bed")
             ),
@@ -180,12 +176,6 @@ class BookingData:
     @staticmethod
     def valid_booking_variations() -> list[tuple[str, dict[str, Any]]]:
         """Generate valid contract variations and boundary payloads for create booking."""
-        checkin_date = date.today() + timedelta(days=fake.random_int(min=1, max=30))
-        checkout_date = checkin_date + timedelta(days=1)
-        one_night_dates = {
-            "checkin": checkin_date.isoformat(),
-            "checkout": checkout_date.isoformat(),
-        }
         return [
             # Contract variation: Omit implicit optional field 'additionalneeds'
             (
@@ -202,16 +192,24 @@ class BookingData:
             # Boundary Value Analysis (BVA): Minimum valid hotel stay (1 night)
             (
                 "one_night_minimum_stay",
-                BookingData.valid_booking_payload(bookingdates=one_night_dates),
+                BookingData.valid_booking_payload(
+                    bookingdates=BookingData.booking_dates(
+                        checkin_offset_days=fake.random_int(min=1, max=30),
+                        stay_nights=1,
+                    )
+                ),
             ),
         ]
 
     @staticmethod
     def remove_key(payload: dict[str, Any], *keys: str) -> dict[str, Any]:
         """Remove a root or nested key path from a dictionary payload."""
+        # Point target reference to the root payload dictionary in memory
         target = payload
+        # Traverse parent dictionaries up to the penultimate key (keys[:-1])
         for key in keys[:-1]:
             target = target[key]
+        # Remove the final target key (keys[-1]); mutates payload in place
         target.pop(keys[-1])
         return payload
 
@@ -292,11 +290,15 @@ class BookingData:
     @staticmethod
     def replace_key(payload: dict[str, Any], value: Any, *keys: str) -> dict[str, Any]:
         """Replace an existing root or nested key value in a dictionary payload."""
+        # Point target reference to the root payload dictionary in memory
         target = payload
+        # Traverse parent dictionaries up to the penultimate key (keys[:-1])
         for key in keys[:-1]:
             target = target[key]
+        # Fail-fast guard: prevent typos from silently creating a new key
         if keys[-1] not in target:
             raise KeyError(keys[-1])
+        # Overwrite the final target key (keys[-1]); mutates payload in place
         target[keys[-1]] = value
         return payload
 
@@ -330,6 +332,96 @@ class BookingData:
                 BookingData.replace_key(
                     BookingData.valid_booking_payload(),
                     True,
+                    "bookingdates",
+                    "checkout",
+                ),
+            ),
+        ]
+
+    @staticmethod
+    def booking_dates(checkin_offset_days: int, stay_nights: int) -> dict[str, str]:
+        """Generate a bookingdates dictionary from relative day offsets."""
+        # checkin_offset_days: days from today (+ future, 0 today, - past)
+        checkin_date = date.today() + timedelta(days=checkin_offset_days)
+        # stay_nights: days relative to checkin (+ valid stay, 0 same day, - inverted)
+        checkout_date = checkin_date + timedelta(days=stay_nights)
+        return {
+            "checkin": checkin_date.isoformat(),
+            "checkout": checkout_date.isoformat(),
+        }
+
+    @staticmethod
+    def invalid_booking_business_rules() -> list[tuple[str, dict[str, Any]]]:
+        """Generate domain-invalid booking payloads accepted by the backend without validation."""
+        return [
+            # Identity rule: guest firstname cannot be an empty string
+            (
+                "empty_firstname",
+                BookingData.valid_booking_payload(firstname=""),
+            ),
+            # Identity rule: guest lastname cannot be an empty string
+            (
+                "empty_lastname",
+                BookingData.valid_booking_payload(lastname=""),
+            ),
+            # Pricing BVA (0): booking price cannot be $0 without a discount contract
+            (
+                "zero_totalprice",
+                BookingData.valid_booking_payload(totalprice=0),
+            ),
+            # Pricing EP (< 0): booking price cannot be a negative amount
+            (
+                "negative_totalprice",
+                BookingData.valid_booking_payload(
+                    totalprice=fake.random_int(min=-1000, max=-1)
+                ),
+            ),
+            # Stay duration BVA (0 nights): checkout cannot be on the same day as checkin
+            (
+                "same_day_checkin_checkout",
+                BookingData.valid_booking_payload(
+                    bookingdates=BookingData.booking_dates(
+                        checkin_offset_days=fake.random_int(min=1, max=30),
+                        stay_nights=0,
+                    )
+                ),
+            ),
+            # Chronological rule (< 0 nights): checkout cannot precede checkin date
+            (
+                "checkout_before_checkin",
+                BookingData.valid_booking_payload(
+                    bookingdates=BookingData.booking_dates(
+                        checkin_offset_days=fake.random_int(min=1, max=30),
+                        stay_nights=fake.random_int(min=-14, max=-1),
+                    )
+                ),
+            ),
+            # Past date rule: new bookings cannot be scheduled in the past
+            (
+                "past_booking_dates",
+                BookingData.valid_booking_payload(
+                    bookingdates=BookingData.booking_dates(
+                        checkin_offset_days=fake.random_int(min=-45, max=-15),
+                        stay_nights=fake.random_int(min=1, max=14),
+                    )
+                ),
+            ),
+            # Date format rule: non-ISO string in checkin is stored as '0NaN-aN-aN'
+            (
+                "malformed_checkin_date",
+                BookingData.replace_key(
+                    BookingData.valid_booking_payload(),
+                    "invalid-date",
+                    "bookingdates",
+                    "checkin",
+                ),
+            ),
+            # Date calendar rule: impossible month/day in checkout is stored as '0NaN-aN-aN'
+            (
+                "malformed_checkout_date",
+                BookingData.replace_key(
+                    BookingData.valid_booking_payload(),
+                    "2026-13-45",
                     "bookingdates",
                     "checkout",
                 ),

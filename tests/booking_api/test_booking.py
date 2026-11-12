@@ -294,3 +294,29 @@ class TestCreateBooking:
         assert response.status_code == 400, (
             f"[{case_id}] Expected 400 Bad Request, but got {response.status_code}"
         )
+
+    @pytest.mark.xfail(
+        reason=(
+            "Audit defect: Restful-Booker accepts domain-invalid business values "
+            "and returns 200 OK instead of 400 Bad Request"
+        ),
+        strict=True,
+    )
+    @pytest.mark.parametrize(
+        ("case_id", "payload"),
+        BookingData.invalid_booking_business_rules(),
+    )
+    def test_create_booking_invalid_business_rules(
+        self,
+        booking_service: BookingService,
+        case_id: str,
+        payload: dict[str, Any],
+    ) -> None:
+        """Audit that domain-invalid booking values should return HTTP 400 Bad Request."""
+        # Arrange: Provided via parametrize (case_id and payload)
+        # Act: Create the booking via POST /booking
+        response = booking_service.create_booking(payload)
+        # Assert: Expect standard 400 Bad Request when business domain rules are violated
+        assert response.status_code == 400, (
+            f"[{case_id}] Expected 400 Bad Request, but got {response.status_code}"
+        )
