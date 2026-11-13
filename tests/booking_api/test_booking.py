@@ -320,3 +320,67 @@ class TestCreateBooking:
         assert response.status_code == 400, (
             f"[{case_id}] Expected 400 Bad Request, but got {response.status_code}"
         )
+
+    @pytest.mark.xfail(
+        reason=(
+            "Audit defect: Restful-Booker silently truncates decimal totalprice "
+            "values to integers, losing fractional cents"
+        ),
+        strict=True,
+    )
+    def test_create_booking_preserves_decimal_price(
+        self, booking_service: BookingService
+    ) -> None:
+        """Audit that a valid decimal totalprice is preserved without truncation."""
+        # Arrange: Request a booking payload with a decimal price from data layer
+        payload = BookingData.decimal_price_booking_payload()
+        # Act: Create the booking via POST /booking
+        response = booking_service.create_booking(payload)
+        # Assert: Expect HTTP 200 and exact decimal price preservation in response
+        assert response.status_code == 200, (
+            f"Expected 200, but got {response.status_code}"
+        )
+        body = response.json()
+        assert body.get("booking") == payload, (
+            f"Expected booking {payload}, but got {body.get('booking')}"
+        )
+
+    @pytest.mark.xfail(
+        reason=(
+            "Audit defect: Restful-Booker returns 500 Internal Server Error "
+            "instead of 400 Bad Request on invalid or incomplete booking schema"
+        ),
+        strict=True,
+    )
+    def test_create_booking_invalid_schema_returns_400(
+        self, booking_service: BookingService
+    ) -> None:
+        """Audit that an incomplete booking schema should return HTTP 400 Bad Request."""
+        # Arrange: Request an empty JSON payload from data layer
+        payload = BookingData.empty_payload()
+        # Act: Create the booking via POST /booking
+        response = booking_service.create_booking(payload)
+        # Assert: Expect standard 400 Bad Request status code
+        assert response.status_code == 400, (
+            f"Expected 400 Bad Request, but got {response.status_code}"
+        )
+
+    @pytest.mark.xfail(
+        reason=(
+            "Audit defect: Restful-Booker returns 200 OK instead of "
+            "201 Created when creating a new booking resource per RFC 9110"
+        ),
+        strict=True,
+    )
+    def test_create_booking_returns_201_created(
+        self, booking_service: BookingService
+    ) -> None:
+        """Audit that POST /booking should return HTTP 201 Created per REST standards."""
+        # Arrange: Generate dynamic booking payload
+        payload = BookingData.valid_booking_payload()
+        # Act: Create the booking via POST /booking
+        response = booking_service.create_booking(payload)
+        # Assert: Expect standard 201 Created status code
+        assert response.status_code == 201, (
+            f"Expected 201 Created, but got {response.status_code}"
+        )

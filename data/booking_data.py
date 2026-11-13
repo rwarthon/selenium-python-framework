@@ -427,3 +427,13 @@ class BookingData:
                 ),
             ),
         ]
+
+    @staticmethod
+    def decimal_price_booking_payload() -> dict[str, Any]:
+        """Generate a valid booking payload with a non-zero decimal totalprice."""
+        # Generate a random float price across the full valid domain [50, 2000]
+        price = fake.pyfloat(min_value=50, max_value=2000, right_digits=2)
+        # Re-sample if pyfloat lands on an exact .00 integer value
+        while price.is_integer():
+            price = fake.pyfloat(min_value=50, max_value=2000, right_digits=2)
+        return BookingData.valid_booking_payload(totalprice=price)
