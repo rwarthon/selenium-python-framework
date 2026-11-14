@@ -384,3 +384,49 @@ class TestCreateBooking:
         assert response.status_code == 201, (
             f"Expected 201 Created, but got {response.status_code}"
         )
+
+
+@pytest.mark.api
+class TestGetBooking:
+    """Test suite for the /booking/{id} retrieval endpoint."""
+
+    @pytest.mark.smoke
+    def test_get_existing_booking(
+        self, booking_service: BookingService, created_booking: dict[str, Any]
+    ) -> None:
+        """Verify that an existing booking can be retrieved by its ID."""
+        # Arrange: Extract booking ID and expected payload from precondition fixture
+        booking_id = created_booking["bookingid"]
+        expected_booking = created_booking["booking"]
+        # Act: Retrieve the booking via GET /booking/{id}
+        response = booking_service.get_booking(booking_id)
+        # Assert: Verify HTTP 200 OK and exact match with persisted booking data
+        assert response.status_code == 200, (
+            f"Expected 200, but got {response.status_code}"
+        )
+        body = response.json()
+        assert body == expected_booking, (
+            f"Expected booking {expected_booking}, but got {body}"
+        )
+
+    @pytest.mark.parametrize(
+        ("case_id", "booking_id"),
+        BookingData.invalid_booking_ids(),
+    )
+    def test_get_booking_not_found(
+        self,
+        booking_service: BookingService,
+        case_id: str,
+        booking_id: Any,
+    ) -> None:
+        """Verify that non-existent or invalid booking IDs return HTTP 404 Not Found."""
+        # Arrange: Provided via parametrize (case_id and booking_id)
+        # Act: Retrieve the booking via GET /booking/{id}
+        response = booking_service.get_booking(booking_id)
+        # Assert: Verify HTTP 404 Not Found status and plain text error per RFC 9110
+        assert response.status_code == 404, (
+            f"[{case_id}] Expected 404, but got {response.status_code}"
+        )
+        assert response.text == "Not Found", (
+            f"[{case_id}] Expected 'Not Found' response body, but got {response.text}"
+        )

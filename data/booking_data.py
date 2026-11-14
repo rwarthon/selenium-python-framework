@@ -437,3 +437,29 @@ class BookingData:
         while price.is_integer():
             price = fake.pyfloat(min_value=50, max_value=2000, right_digits=2)
         return BookingData.valid_booking_payload(totalprice=price)
+
+    @staticmethod
+    def invalid_booking_ids() -> list[tuple[str, Any]]:
+        """Generate non-existent and invalid booking IDs for negative lookup tests."""
+        return [
+            # Valid 32-bit int in high range [100M, 999M] to avoid colliding with active DB IDs
+            (
+                "non_existent_booking_id",
+                fake.random_int(min=100_000_000, max=999_999_999),
+            ),
+            # ID BVA (0): lower invalid boundary since auto-increment IDs start at 1
+            (
+                "zero_booking_id",
+                0,
+            ),
+            # ID EP (< 0): negative integer is invalid for a primary key identifier
+            (
+                "negative_booking_id",
+                fake.random_int(min=-1000, max=-1),
+            ),
+            # Incompatible type: alphabetic string in numeric URI path parameter
+            (
+                "non_numeric_booking_id",
+                fake.word(),
+            ),
+        ]

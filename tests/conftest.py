@@ -1,6 +1,7 @@
 """Global Pytest fixtures for test orchestration and dependency injection."""
 
 from collections.abc import Iterator
+from typing import Any
 
 import pytest
 
@@ -34,3 +35,17 @@ def auth_token() -> str:
             f"Status: {response.status_code}, Response: {response.text}"
         )
     return response.json()["token"]
+
+
+@pytest.fixture(scope="function")
+def created_booking(booking_service: BookingService) -> dict[str, Any]:
+    """Create a fresh booking per test function and return its ID and payload."""
+    payload = BookingData.valid_booking_payload()
+    response = booking_service.create_booking(payload)
+    # Precondition check: Abort test setup if booking creation fails
+    if response.status_code != 200 or "bookingid" not in response.json():
+        pytest.fail(
+            f"Precondition failed: Could not create booking. "
+            f"Status: {response.status_code}, Response: {response.text}"
+        )
+    return response.json()
