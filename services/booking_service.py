@@ -32,7 +32,7 @@ class BookingService:
         """Request an authentication token using user credentials."""
         return self.client.post(BookingEndpoints.AUTH, payload=payload)
 
-    def get_all_bookings(self, params: dict[str, Any] | None = None) -> Response:
+    def get_booking_ids(self, params: dict[str, Any] | None = None) -> Response:
         """Retrieve a list of booking IDs, optionally filtered by query parameters."""
         return self.client.get(BookingEndpoints.BOOKING, params=params)
 

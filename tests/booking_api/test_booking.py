@@ -430,3 +430,26 @@ class TestGetBooking:
         assert response.text == "Not Found", (
             f"[{case_id}] Expected 'Not Found' response body, but got {response.text}"
         )
+
+
+@pytest.mark.api
+class TestGetBookingIds:
+    """Test suite for the /booking search and collection endpoint."""
+
+    @pytest.mark.smoke
+    def test_get_booking_ids_unfiltered(
+        self, booking_service: BookingService, created_booking: dict[str, Any]
+    ) -> None:
+        """Verify that an unfiltered search returns a list containing the created booking ID."""
+        # Arrange: Build the expected booking ID entry from the precondition fixture
+        booking_id = created_booking["bookingid"]
+        expected_item = {"bookingid": booking_id}
+        # Act: Retrieve the full collection of booking IDs without query filters
+        response = booking_service.get_booking_ids()
+        # Assert: Verify HTTP 200 OK, list structure, and presence of the created booking ID
+        assert response.status_code == 200, (
+            f"Expected 200, but got {response.status_code}"
+        )
+        body = response.json()
+        assert isinstance(body, list), f"Expected list response, but got {type(body)}"
+        assert expected_item in body, f"Expected {expected_item} in booking ID list"
