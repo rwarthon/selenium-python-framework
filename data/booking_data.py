@@ -463,3 +463,13 @@ class BookingData:
                 fake.word(),
             ),
         ]
+
+    @staticmethod
+    def valid_name_filter_keys() -> list[tuple[str, str]]:
+        """Return single-fault name filter keys for positive search tests."""
+        return [
+            # Partition: Exact match by guest first name
+            ("filter_by_firstname", "firstname"),
+            # Partition: Exact match by guest last name
+            ("filter_by_lastname", "lastname"),
+        ]

@@ -453,3 +453,30 @@ class TestGetBookingIds:
         body = response.json()
         assert isinstance(body, list), f"Expected list response, but got {type(body)}"
         assert expected_item in body, f"Expected {expected_item} in booking ID list"
+
+    @pytest.mark.parametrize(
+        ("case_id", "field"),
+        BookingData.valid_name_filter_keys(),
+    )
+    def test_get_booking_ids_by_valid_name(
+        self,
+        booking_service: BookingService,
+        created_booking: dict[str, Any],
+        case_id: str,
+        field: str,
+    ) -> None:
+        """Verify that filtering by a valid guest name returns the created booking ID."""
+        # Arrange: Extract single-field filter and expected ID from precondition fixture
+        params = {field: created_booking["booking"][field]}
+        booking_id = created_booking["bookingid"]
+        expected_item = {"bookingid": booking_id}
+        # Act: Search booking IDs using the single name query parameter
+        response = booking_service.get_booking_ids(params=params)
+        # Assert: Verify HTTP 200 OK and presence of the created booking ID in results
+        assert response.status_code == 200, (
+            f"[{case_id}] Expected 200, but got {response.status_code}"
+        )
+        body = response.json()
+        assert expected_item in body, (
+            f"[{case_id}] Expected {expected_item} in filtered results for {params}"
+        )
