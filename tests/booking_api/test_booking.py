@@ -480,3 +480,26 @@ class TestGetBookingIds:
         assert expected_item in body, (
             f"[{case_id}] Expected {expected_item} in filtered results for {params}"
         )
+
+    @pytest.mark.parametrize(
+        ("case_id", "params"),
+        BookingData.non_existent_name_filters(),
+    )
+    def test_get_booking_ids_non_matching_name(
+        self,
+        booking_service: BookingService,
+        case_id: str,
+        params: dict[str, str],
+    ) -> None:
+        """Verify that filtering by a non-existent name returns an empty list."""
+        # Arrange: Provided via parametrize (case_id and params)
+        # Act: Search booking IDs using the non-existent name filter
+        response = booking_service.get_booking_ids(params=params)
+        # Assert: Verify HTTP 200 OK and empty list body per RFC 9110
+        assert response.status_code == 200, (
+            f"[{case_id}] Expected 200, but got {response.status_code}"
+        )
+        body = response.json()
+        assert body == [], (
+            f"[{case_id}] Expected empty list [], but got {body} for {params}"
+        )

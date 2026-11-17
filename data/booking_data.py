@@ -473,3 +473,19 @@ class BookingData:
             # Partition: Exact match by guest last name
             ("filter_by_lastname", "lastname"),
         ]
+
+    @staticmethod
+    def non_existent_name_filters() -> list[tuple[str, dict[str, str]]]:
+        """Generate collision-free alphabetic name filters for negative search tests."""
+        return [
+            # Partition: Valid alphabetic first name not present in database
+            (
+                "non_existent_firstname",
+                {"firstname": fake.first_name() + fake.lexify(text="????????")},
+            ),
+            # Partition: Valid alphabetic last name not present in database
+            (
+                "non_existent_lastname",
+                {"lastname": fake.last_name() + fake.lexify(text="????????")},
+            ),
+        ]
