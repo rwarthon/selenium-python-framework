@@ -489,3 +489,14 @@ class BookingData:
                 {"lastname": fake.last_name() + fake.lexify(text="????????")},
             ),
         ]
+
+    @staticmethod
+    def date_filter_params(
+        booking: dict[str, Any], field: str, day_offset: int
+    ) -> dict[str, str]:
+        """Build a date query filter shifted by a boundary day offset."""
+        # booking: inner booking payload; field: 'checkin' or 'checkout'
+        base_date = date.fromisoformat(booking["bookingdates"][field])
+        # day_offset: days relative to base_date (-1 before, 0 same day, +1 after)
+        target_date = (base_date + timedelta(days=day_offset)).isoformat()
+        return {field: target_date}

@@ -503,3 +503,24 @@ class TestGetBookingIds:
         assert body == [], (
             f"[{case_id}] Expected empty list [], but got {body} for {params}"
         )
+
+    def test_get_booking_ids_checkin_greater_than_filter(
+        self, booking_service: BookingService, created_booking: dict[str, Any]
+    ) -> None:
+        """Verify that a checkin filter earlier than the booking returns its ID."""
+        # Arrange: Build checkin filter (-1 day) and expected ID from fixture
+        params = BookingData.date_filter_params(
+            created_booking["booking"], "checkin", -1
+        )
+        booking_id = created_booking["bookingid"]
+        expected_item = {"bookingid": booking_id}
+        # Act: Search booking IDs using the shifted checkin query parameter
+        response = booking_service.get_booking_ids(params=params)
+        # Assert: Verify HTTP 200 OK and presence of the created booking ID in results
+        assert response.status_code == 200, (
+            f"Expected 200, but got {response.status_code}"
+        )
+        body = response.json()
+        assert expected_item in body, (
+            f"Expected {expected_item} in filtered results for {params}"
+        )
