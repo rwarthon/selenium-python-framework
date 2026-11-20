@@ -546,3 +546,26 @@ class TestGetBookingIds:
         assert expected_item not in body, (
             f"Expected {expected_item} to be excluded from results for {params}"
         )
+
+    @pytest.mark.parametrize(
+        ("case_id", "params"),
+        BookingData.malformed_date_filters(),
+    )
+    def test_get_booking_ids_malformed_date_filters(
+        self,
+        booking_service: BookingService,
+        case_id: str,
+        params: dict[str, str],
+    ) -> None:
+        """Verify that malformed date query filters reject the search request."""
+        # Arrange: Provided via parametrize (case_id and params)
+        # Act: Search booking IDs using the malformed date query parameter
+        response = booking_service.get_booking_ids(params=params)
+        # Assert: Audit note - Restful-Booker returns 500 Internal Server Error instead of 400
+        # (HTTP 400 standard compliance is audited in test_get_booking_ids_malformed_date_returns_400)
+        assert response.status_code == 500, (
+            f"[{case_id}] Expected 500, but got {response.status_code}"
+        )
+        assert response.text == "Internal Server Error", (
+            f"[{case_id}] Expected 'Internal Server Error' response body, but got {response.text}"
+        )

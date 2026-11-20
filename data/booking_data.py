@@ -500,3 +500,19 @@ class BookingData:
         # day_offset: days relative to base_date (-1 before, 0 same day, +1 after)
         target_date = (base_date + timedelta(days=day_offset)).isoformat()
         return {field: target_date}
+
+    @staticmethod
+    def malformed_date_filters() -> list[tuple[str, dict[str, str]]]:
+        """Generate malformed date query filters that trigger 500 server exceptions."""
+        return [
+            # Date format rule: non-ISO string in checkin triggers unhandled server error
+            (
+                "malformed_checkin_date",
+                {"checkin": "invalid-date"},
+            ),
+            # Date calendar rule: impossible month/day in checkout triggers unhandled server error
+            (
+                "malformed_checkout_date",
+                {"checkout": "2026-13-45"},
+            ),
+        ]
