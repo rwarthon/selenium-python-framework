@@ -615,3 +615,52 @@ class TestGetBookingIds:
         assert expected_item in body, (
             f"[{case_id}] Expected {expected_item} in filtered results for {params}"
         )
+
+    @pytest.mark.xfail(
+        reason=(
+            "Audit defect: Restful-Booker uses inverted '<=' on checkout "
+            "instead of '>=' per API contract, erroneously including earlier bookings"
+        ),
+        strict=True,
+    )
+    def test_get_booking_ids_checkout_exclusion_defect(
+        self, booking_service: BookingService, created_booking: dict[str, Any]
+    ) -> None:
+        """Audit that a checkout filter later than the booking excludes its ID."""
+        # Arrange: Build checkout filter (+1 day) and expected ID from fixture
+        params = BookingData.date_filter_params(
+            created_booking["booking"], "checkout", 1
+        )
+        booking_id = created_booking["bookingid"]
+        expected_item = {"bookingid": booking_id}
+        # Act: Search booking IDs using the shifted checkout query parameter
+        response = booking_service.get_booking_ids(params=params)
+        # Assert: Expect HTTP 200 OK, list structure, and exclusion of the created booking ID
+        assert response.status_code == 200, (
+            f"Expected 200, but got {response.status_code}"
+        )
+        body = response.json()
+        assert isinstance(body, list), f"Expected list response, but got {type(body)}"
+        assert expected_item not in body, (
+            f"Expected {expected_item} to be excluded from results for {params}"
+        )
+
+    @pytest.mark.xfail(
+        reason=(
+            "Audit defect: Restful-Booker returns 500 Internal Server Error "
+            "instead of 400 Bad Request on malformed date query parameters"
+        ),
+        strict=True,
+    )
+    def test_get_booking_ids_malformed_date_returns_400(
+        self, booking_service: BookingService
+    ) -> None:
+        """Audit that a malformed date filter should return HTTP 400 Bad Request."""
+        # Arrange: Request a representative malformed date filter from data layer
+        params = BookingData.malformed_date_filter()
+        # Act: Search booking IDs using the malformed date query parameter
+        response = booking_service.get_booking_ids(params=params)
+        # Assert: Expect standard 400 Bad Request status code
+        assert response.status_code == 400, (
+            f"Expected 400 Bad Request, but got {response.status_code}"
+        )

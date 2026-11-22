@@ -536,3 +536,8 @@ class BookingData:
             # Checkout BVA (>): booking > filter should match (>=), backend uses <=
             ("checkout_greater_than_filter", "checkout", -1),
         ]
+
+    @staticmethod
+    def malformed_date_filter() -> dict[str, str]:
+        """Return a representative malformed date query filter."""
+        return {"checkin": "invalid-date"}
