@@ -502,6 +502,16 @@ class BookingData:
         return {field: target_date}
 
     @staticmethod
+    def valid_date_inclusion_filters() -> list[tuple[str, str, int]]:
+        """Return BVA date filters that validly include the booking per API contract."""
+        return [
+            # Checkin BVA (>): booking > filter matches (>=) and backend uses >
+            ("checkin_greater_than_filter", "checkin", -1),
+            # Checkout BVA (=): booking == filter matches (>=) and backend uses <=
+            ("checkout_equal_to_filter", "checkout", 0),
+        ]
+
+    @staticmethod
     def malformed_date_filters() -> list[tuple[str, dict[str, str]]]:
         """Generate malformed date query filters that trigger 500 server exceptions."""
         return [
@@ -515,4 +525,14 @@ class BookingData:
                 "malformed_checkout_date",
                 {"checkout": "2026-13-45"},
             ),
+        ]
+
+    @staticmethod
+    def defective_date_inclusion_filters() -> list[tuple[str, str, int]]:
+        """Return BVA date filters that should include the booking but are omitted."""
+        return [
+            # Checkin BVA (=): booking == filter should match (>=), backend uses >
+            ("checkin_equal_to_filter", "checkin", 0),
+            # Checkout BVA (>): booking > filter should match (>=), backend uses <=
+            ("checkout_greater_than_filter", "checkout", -1),
         ]

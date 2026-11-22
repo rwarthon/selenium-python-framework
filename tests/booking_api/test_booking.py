@@ -504,25 +504,34 @@ class TestGetBookingIds:
             f"[{case_id}] Expected empty list [], but got {body} for {params}"
         )
 
-    def test_get_booking_ids_checkin_greater_than_filter(
-        self, booking_service: BookingService, created_booking: dict[str, Any]
+    @pytest.mark.parametrize(
+        ("case_id", "field", "day_offset"),
+        BookingData.valid_date_inclusion_filters(),
+    )
+    def test_get_booking_ids_valid_date_inclusion(
+        self,
+        booking_service: BookingService,
+        created_booking: dict[str, Any],
+        case_id: str,
+        field: str,
+        day_offset: int,
     ) -> None:
-        """Verify that a checkin filter earlier than the booking returns its ID."""
-        # Arrange: Build checkin filter (-1 day) and expected ID from fixture
+        """Verify that valid checkin and checkout BVA filters include the booking ID."""
+        # Arrange: Build shifted date filter and expected ID from fixture
         params = BookingData.date_filter_params(
-            created_booking["booking"], "checkin", -1
+            created_booking["booking"], field, day_offset
         )
         booking_id = created_booking["bookingid"]
         expected_item = {"bookingid": booking_id}
-        # Act: Search booking IDs using the shifted checkin query parameter
+        # Act: Search booking IDs using the shifted date query parameter
         response = booking_service.get_booking_ids(params=params)
         # Assert: Verify HTTP 200 OK and presence of the created booking ID in results
         assert response.status_code == 200, (
-            f"Expected 200, but got {response.status_code}"
+            f"[{case_id}] Expected 200, but got {response.status_code}"
         )
         body = response.json()
         assert expected_item in body, (
-            f"Expected {expected_item} in filtered results for {params}"
+            f"[{case_id}] Expected {expected_item} in filtered results for {params}"
         )
 
     def test_get_booking_ids_checkin_less_than_filter(
@@ -568,4 +577,41 @@ class TestGetBookingIds:
         )
         assert response.text == "Internal Server Error", (
             f"[{case_id}] Expected 'Internal Server Error' response body, but got {response.text}"
+        )
+
+    @pytest.mark.xfail(
+        reason=(
+            "Audit defect: Restful-Booker uses strict '>' on checkin and "
+            "inverted '<=' on checkout instead of '>=' per API contract"
+        ),
+        strict=True,
+    )
+    @pytest.mark.parametrize(
+        ("case_id", "field", "day_offset"),
+        BookingData.defective_date_inclusion_filters(),
+    )
+    def test_get_booking_ids_date_inclusion_defects(
+        self,
+        booking_service: BookingService,
+        created_booking: dict[str, Any],
+        case_id: str,
+        field: str,
+        day_offset: int,
+    ) -> None:
+        """Audit that valid checkin and checkout BVA filters include the booking ID."""
+        # Arrange: Build shifted date filter and expected ID from fixture
+        params = BookingData.date_filter_params(
+            created_booking["booking"], field, day_offset
+        )
+        booking_id = created_booking["bookingid"]
+        expected_item = {"bookingid": booking_id}
+        # Act: Search booking IDs using the shifted date query parameter
+        response = booking_service.get_booking_ids(params=params)
+        # Assert: Expect HTTP 200 OK and inclusion of the created booking ID
+        assert response.status_code == 200, (
+            f"[{case_id}] Expected 200, but got {response.status_code}"
+        )
+        body = response.json()
+        assert expected_item in body, (
+            f"[{case_id}] Expected {expected_item} in filtered results for {params}"
         )
