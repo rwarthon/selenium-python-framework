@@ -664,3 +664,42 @@ class TestGetBookingIds:
         assert response.status_code == 400, (
             f"Expected 400 Bad Request, but got {response.status_code}"
         )
+
+
+@pytest.mark.api
+class TestUpdateBooking:
+    """Test suite for the /booking/{id} full update endpoint."""
+
+    @pytest.mark.smoke
+    def test_update_and_verify_booking(
+        self,
+        booking_service: BookingService,
+        auth_token: str,
+        created_booking: dict[str, Any],
+    ) -> None:
+        """Verify full booking update via PUT and data persistence via GET."""
+        # Arrange: Extract booking ID and generate a new full booking payload
+        booking_id = created_booking["bookingid"]
+        payload = BookingData.valid_booking_payload()
+        # Act: Replace the existing booking via PUT /booking/{id}
+        update_response = booking_service.update_booking(
+            booking_id, payload, auth_token
+        )
+        # Assert: Verify HTTP 200 OK and updated booking data in response
+        assert update_response.status_code == 200, (
+            f"Expected 200, but got {update_response.status_code}"
+        )
+        update_body = update_response.json()
+        assert update_body == payload, (
+            f"Expected updated booking {payload}, but got {update_body}"
+        )
+        # Act: Retrieve the updated booking via GET /booking/{id} to confirm persistence
+        get_response = booking_service.get_booking(booking_id)
+        # Assert: Verify persisted record matches the new payload exactly
+        assert get_response.status_code == 200, (
+            f"Expected 200 on GET, but got {get_response.status_code}"
+        )
+        get_body = get_response.json()
+        assert get_body == payload, (
+            f"Expected persisted booking {payload}, but got {get_body}"
+        )
