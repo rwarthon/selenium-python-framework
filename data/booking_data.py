@@ -541,3 +541,10 @@ class BookingData:
     def malformed_date_filter() -> dict[str, str]:
         """Return a representative malformed date query filter."""
         return {"checkin": "invalid-date"}
+
+    @staticmethod
+    def valid_booking_without_additionalneeds() -> dict[str, Any]:
+        """Generate a valid booking payload omitting optional additionalneeds."""
+        return BookingData.remove_key(
+            BookingData.valid_booking_payload(), "additionalneeds"
+        )

@@ -703,3 +703,86 @@ class TestUpdateBooking:
         assert get_body == payload, (
             f"Expected persisted booking {payload}, but got {get_body}"
         )
+
+    def test_update_booking_idempotency(
+        self,
+        booking_service: BookingService,
+        auth_token: str,
+        created_booking: dict[str, Any],
+    ) -> None:
+        """Verify that consecutive identical PUT requests leave the same state."""
+        # Arrange: Extract booking ID and generate a single full booking payload
+        booking_id = created_booking["bookingid"]
+        payload = BookingData.valid_booking_payload()
+        # Act: Send the first PUT request to replace the booking
+        first_response = booking_service.update_booking(booking_id, payload, auth_token)
+        # Assert: Verify HTTP 200 OK and updated booking data on first PUT
+        assert first_response.status_code == 200, (
+            f"Expected 200 on first PUT, but got {first_response.status_code}"
+        )
+        first_body = first_response.json()
+        assert first_body == payload, (
+            f"Expected first PUT body {payload}, but got {first_body}"
+        )
+        # Act: Send a second identical PUT request to verify idempotency
+        second_response = booking_service.update_booking(
+            booking_id, payload, auth_token
+        )
+        # Assert: Verify HTTP 200 OK and identical booking data on second PUT
+        assert second_response.status_code == 200, (
+            f"Expected 200 on second PUT, but got {second_response.status_code}"
+        )
+        second_body = second_response.json()
+        assert second_body == payload, (
+            f"Expected second PUT body {payload}, but got {second_body}"
+        )
+        # Act: Retrieve the booking via GET /booking/{id} to confirm final state
+        get_response = booking_service.get_booking(booking_id)
+        # Assert: Verify persisted record remains identical to the payload
+        assert get_response.status_code == 200, (
+            f"Expected 200 on GET, but got {get_response.status_code}"
+        )
+        get_body = get_response.json()
+        assert get_body == payload, (
+            f"Expected persisted booking {payload}, but got {get_body}"
+        )
+
+    @pytest.mark.xfail(
+        reason=(
+            "Audit defect: Restful-Booker retains previous optional "
+            "additionalneeds on PUT instead of full resource replacement per RFC 9110"
+        ),
+        strict=True,
+    )
+    def test_update_booking_without_additionalneeds(
+        self,
+        booking_service: BookingService,
+        auth_token: str,
+        created_booking: dict[str, Any],
+    ) -> None:
+        """Audit that PUT removes optional additionalneeds when omitted."""
+        # Arrange: Extract booking ID and build valid payload without additionalneeds
+        booking_id = created_booking["bookingid"]
+        payload = BookingData.valid_booking_without_additionalneeds()
+        # Act: Replace the existing booking via PUT /booking/{id}
+        update_response = booking_service.update_booking(
+            booking_id, payload, auth_token
+        )
+        # Assert: Verify HTTP 200 OK and absence of additionalneeds in response
+        assert update_response.status_code == 200, (
+            f"Expected 200, but got {update_response.status_code}"
+        )
+        update_body = update_response.json()
+        assert update_body == payload, (
+            f"Expected updated booking {payload}, but got {update_body}"
+        )
+        # Act: Retrieve the updated booking via GET /booking/{id} to confirm removal
+        get_response = booking_service.get_booking(booking_id)
+        # Assert: Verify persisted record matches payload without additionalneeds
+        assert get_response.status_code == 200, (
+            f"Expected 200 on GET, but got {get_response.status_code}"
+        )
+        get_body = get_response.json()
+        assert get_body == payload, (
+            f"Expected persisted booking {payload}, but got {get_body}"
+        )
