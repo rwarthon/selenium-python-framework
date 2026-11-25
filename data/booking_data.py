@@ -548,3 +548,15 @@ class BookingData:
         return BookingData.remove_key(
             BookingData.valid_booking_payload(), "additionalneeds"
         )
+
+    @staticmethod
+    def invalid_auth_tokens() -> list[tuple[str, str | None]]:
+        """Generate invalid and missing auth tokens for negative security tests."""
+        return [
+            # Access control: request without Cookie authentication header
+            ("missing_token", None),
+            # Access control: request with empty token cookie value
+            ("empty_token", ""),
+            # Access control: request with non-existent 15-char hex token
+            ("invalid_token", fake.hexify(text="^" * 15)),
+        ]

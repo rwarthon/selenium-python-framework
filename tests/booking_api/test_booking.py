@@ -747,6 +747,44 @@ class TestUpdateBooking:
             f"Expected persisted booking {payload}, but got {get_body}"
         )
 
+    @pytest.mark.parametrize(
+        ("case_id", "token"),
+        BookingData.invalid_auth_tokens(),
+    )
+    def test_update_booking_unauthorized(
+        self,
+        booking_service: BookingService,
+        created_booking: dict[str, Any],
+        case_id: str,
+        token: str | None,
+    ) -> None:
+        """Verify that unauthorized PUT requests are rejected without mutating data."""
+        # Arrange: Extract original booking state and generate a new payload
+        booking_id = created_booking["bookingid"]
+        original_booking = created_booking["booking"]
+        payload = BookingData.valid_booking_payload()
+        # Act: Attempt to update the booking with an invalid or missing token
+        update_response = booking_service.update_booking(booking_id, payload, token)
+        # Assert: Audit note - Restful-Booker returns 403 Forbidden instead of 401
+        # (HTTP 401 standard compliance is audited in test_update_booking_unauthorized_returns_401)
+        assert update_response.status_code == 403, (
+            f"[{case_id}] Expected 403, but got {update_response.status_code}"
+        )
+        assert update_response.text == "Forbidden", (
+            f"[{case_id}] Expected 'Forbidden' response body, but got {update_response.text}"
+        )
+        # Act: Retrieve the booking via GET /booking/{id} to confirm zero side effects
+        get_response = booking_service.get_booking(booking_id)
+        # Assert: Verify persisted record was not modified by the rejected PUT
+        assert get_response.status_code == 200, (
+            f"[{case_id}] Expected 200 on GET, but got {get_response.status_code}"
+        )
+        get_body = get_response.json()
+        assert get_body == original_booking, (
+            f"[{case_id}] Security breach: booking mutated after 403. "
+            f"Expected {original_booking}, but got {get_body}"
+        )
+
     @pytest.mark.xfail(
         reason=(
             "Audit defect: Restful-Booker retains previous optional "
