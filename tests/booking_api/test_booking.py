@@ -785,6 +785,31 @@ class TestUpdateBooking:
             f"Expected {original_booking}, but got {get_body}"
         )
 
+    @pytest.mark.parametrize(
+        ("case_id", "payload"),
+        BookingData.missing_required_booking_fields(),
+    )
+    def test_update_booking_missing_required_fields(
+        self,
+        booking_service: BookingService,
+        auth_token: str,
+        created_booking: dict[str, Any],
+        case_id: str,
+        payload: dict[str, Any],
+    ) -> None:
+        """Verify that omitting any required schema field rejects PUT updates."""
+        # Arrange: Extract booking ID from fixture; payload provided via parametrize
+        booking_id = created_booking["bookingid"]
+        # Act: Attempt to replace the booking with an incomplete payload
+        response = booking_service.update_booking(booking_id, payload, auth_token)
+        # Assert: Verify HTTP 400 Bad Request per full-resource PUT contract
+        assert response.status_code == 400, (
+            f"[{case_id}] Expected 400, but got {response.status_code}"
+        )
+        assert response.text == "Bad Request", (
+            f"[{case_id}] Expected 'Bad Request' response body, but got {response.text}"
+        )
+
     @pytest.mark.xfail(
         reason=(
             "Audit defect: Restful-Booker retains previous optional "
