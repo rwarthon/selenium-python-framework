@@ -810,6 +810,31 @@ class TestUpdateBooking:
             f"[{case_id}] Expected 'Bad Request' response body, but got {response.text}"
         )
 
+    @pytest.mark.parametrize(
+        ("case_id", "booking_id"),
+        BookingData.invalid_booking_ids(),
+    )
+    def test_update_booking_not_found(
+        self,
+        booking_service: BookingService,
+        auth_token: str,
+        case_id: str,
+        booking_id: Any,
+    ) -> None:
+        """Verify that updating non-existent or invalid booking IDs is rejected."""
+        # Arrange: Generate a valid full booking payload; booking_id via parametrize
+        payload = BookingData.valid_booking_payload()
+        # Act: Attempt to update a non-existent or invalid booking ID via PUT
+        response = booking_service.update_booking(booking_id, payload, auth_token)
+        # Assert: Audit note - Restful-Booker returns 405 Method Not Allowed instead of 404
+        # (HTTP 404 standard compliance is audited in test_update_booking_not_found_returns_404)
+        assert response.status_code == 405, (
+            f"[{case_id}] Expected 405, but got {response.status_code}"
+        )
+        assert response.text == "Method Not Allowed", (
+            f"[{case_id}] Expected 'Method Not Allowed' response body, but got {response.text}"
+        )
+
     @pytest.mark.xfail(
         reason=(
             "Audit defect: Restful-Booker retains previous optional "
